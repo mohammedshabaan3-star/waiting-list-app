@@ -63,8 +63,6 @@ RESOURCES_DIR = Path("static")
 for p in [DB_PATH.parent, STORAGE_DIR, EXPORTS_DIR, RESOURCES_DIR]:
     p.mkdir(parents=True, exist_ok=True)
 
-# ... (الأجزاء الأخرى من الكود كما هي) ...
-
 # - أنماط CSS مخصصة - #
 st.markdown("""
 <style>
@@ -341,7 +339,8 @@ GOVERNMENT_OPTIONAL_DOCS = {
     "صورة بطاقة ضريبية للمنشأة سارية",
     "صورة حديثة للسجل التجاري",
     "أخرى", # إضافة "أخرى" للحكومي
-        "صورة حديثة للسجل التجاري",
+    "تقييم مكافحة العدوى (ذاتي)",
+     "صورة حديثة للسجل التجاري",
 }
 # المستندات التي لا تُطلب للمستشفيات الخاصة (افتراضياً) - يمكن أن تكون فارغة
 PRIVATE_OPTIONAL_DOCS = set()
