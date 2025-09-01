@@ -13,7 +13,7 @@ from streamlit_option_menu import option_menu
 import plotly.express as px
 import plotly.graph_objects as go
 # ---------------------------- إعدادات أساسية ---------------------------- #
-APP_TITLE = "المشروع القومي لقوائم الانتظار     -      التعاقد على الخدمات الجراحية"
+APP_TITLE = "المشروع القومي لقوائم الانتظار-التعاقد على الخدمات الجراحية"
 DB_PATH = Path("data/app.db")
 STORAGE_DIR = Path("storage")
 EXPORTS_DIR = Path("exports")
@@ -2850,6 +2850,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
