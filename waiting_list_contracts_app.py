@@ -112,7 +112,7 @@ st.markdown("""
     .header {
         text-align: center;
         color: #1e40af;
-        font-weight: 200;
+        font-weight: 100;
         margin-bottom: 20px;
         font-family: 'Cairo', sans-serif;
     }
@@ -2850,4 +2850,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
