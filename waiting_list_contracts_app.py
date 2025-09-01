@@ -119,7 +119,7 @@ st.markdown("""
     
     .subheader {
         color: #1a56db;
-        font-weight: 200;
+        font-weight: 100;
         margin-top: 20px;
         margin-bottom: 10px;
         font-family: 'Cairo', sans-serif;
@@ -2850,5 +2850,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
