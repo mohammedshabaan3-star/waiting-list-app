@@ -335,15 +335,16 @@ DOC_TYPES = [
     "السياسات الخاصة بالجراحة والتخدير معتمدة",
     "أخرى",
 ]
-# المستندات التي لا تُطلب للمستشفيات الحكومية (افتراضياً)
 GOVERNMENT_OPTIONAL_DOCS = {
     "ترخيص العلاج الحر موضح به التخصصات", # <-- تمت تصحيحه
     "صورة بطاقة ضريبية للمنشأة سارية",
     "صورة حديثة للسجل التجاري",
-    "أخرى", # إضافة "أخرى" للحكومي
+    "أخرى","تقييم مكافحة العدوى (ذاتي)"
 }
 # المستندات التي لا تُطلب للمستشفيات الخاصة (افتراضياً) - يمكن أن تكون فارغة
-PRIVATE_OPTIONAL_DOCS = set()
+PRIVATE_OPTIONAL_DOCS = set(["أخرى","تقييم مكافحة العدوى من الجهة التابع لها المستشفى"])
+# ... (باقي الثوابت كما هي: DEFAULT_SERVICES, DEFAULT_HOSPITAL_TYPES, إلخ) ...
+# -----------
 
 # ملفات الموارد المتاحة للتنزيل
 RESOURCE_FILES = [
@@ -722,38 +723,28 @@ def get_db_initial_version():
     except:
         return 0
 
+# تعريف الإصدار الحالي لهيكل قاعدة البيانات
+# قم بزيادة هذا الرقم في كل مرة تضيف فيها تغييرًا جديدًا على هيكل قاعدة البيانات
+DB_SCHEMA_VERSION = 4 # مثال: تم إضافة عمود is_video_allowed وجدول hospital_type_optional_docs
+
 def run_ddl():
-    # التحقق من الحاجة لتشغيل DDL فقط عند الحاجة
-    if 'db_version_checked' in st.session_state and st.session_state.db_version_checked:
-        return
-    
+    """إنشاء جداول قاعدة البيانات وتحديثها إذا لزم الأمر لـ SQLite."""
     conn = get_conn()
-    cur = conn.cursor()
-    
-    # 1. إنشاء جدول لتتبع إصدار قاعدة البيانات (إذا لم يكن موجودًا)
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS db_version (
-            version INTEGER PRIMARY KEY
-        )
-    """)
-    
-    # 2. التحقق من الإصدار الحالي
-    cur.execute("SELECT version FROM db_version ORDER BY version DESC LIMIT 1")
-    row = cur.fetchone()
-    current_version = row['version'] if row else 0
-    
-    # 3. تطبيق التحديثات التدريجية إذا لزم الأمر
-    if current_version < 1:
-        # التحديث إلى الإصدار 1: إنشاء الجداول الأساسية
+    with conn:
+        cur = conn.cursor()
+        
+        # --- إنشاء الجداول ---
+        # جدول الأدمن
         cur.execute("""
             CREATE TABLE IF NOT EXISTS admins (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 username TEXT UNIQUE,
                 password_hash TEXT,
-                role TEXT DEFAULT 'admin'
+                role TEXT DEFAULT 'admin' -- admin, reviewer
             )
         """)
         
+        # جدول المستشفيات
         cur.execute("""
             CREATE TABLE IF NOT EXISTS hospitals (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -775,6 +766,7 @@ def run_ddl():
             )
         """)
         
+        # جدول الخدمات
         cur.execute("""
             CREATE TABLE IF NOT EXISTS services (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -783,158 +775,7 @@ def run_ddl():
             )
         """)
         
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS requests (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                hospital_id INTEGER,
-                service_id INTEGER,
-                age_category TEXT,
-                status TEXT DEFAULT 'جاري دراسة الطلب ومراجعة الأوراق',
-                admin_note TEXT,
-                created_at TEXT,
-                deleted_at TEXT,
-                closed_at TEXT,
-                FOREIGN KEY (hospital_id) REFERENCES hospitals(id),
-                FOREIGN KEY (service_id) REFERENCES services(id)
-            )
-        """)
-        
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS documents (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                request_id INTEGER,
-                doc_type TEXT,
-                display_name TEXT,
-                file_name TEXT,
-                file_path TEXT,
-                required INTEGER DEFAULT 1,
-                satisfied INTEGER DEFAULT 0,
-                admin_comment TEXT,
-                uploaded_at TEXT,
-                FOREIGN KEY (request_id) REFERENCES requests(id)
-            )
-        """)
-        
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS meta (
-                key TEXT PRIMARY KEY,
-                value TEXT
-            )
-        """)
-        
-        cur.execute("INSERT OR REPLACE INTO db_version (version) VALUES (1)")
-        conn.commit()
-
-    if current_version < 2:
-        # التحديث إلى الإصدار 2: إضافة عمود closed_at
-        try:
-            cur.execute("ALTER TABLE requests ADD COLUMN closed_at TEXT")
-        except sqlite3.OperationalError as e:
-            if "duplicate column name" not in str(e).lower():
-                print(f"تحذير/خطأ عند إضافة عمود closed_at: {e}")
-        cur.execute("INSERT OR REPLACE INTO db_version (version) VALUES (2)")
-        conn.commit()
-
-    if current_version < 3:
-        # التحديث إلى الإصدار 3: إضافة عمود is_video_allowed
-        try:
-            cur.execute("ALTER TABLE documents ADD COLUMN is_video_allowed INTEGER DEFAULT 0")
-        except sqlite3.OperationalError as e:
-            if "duplicate column name" not in str(e).lower():
-                print(f"تحذير/خطأ عند إضافة عمود is_video_allowed: {e}")
-        cur.execute("INSERT OR REPLACE INTO db_version (version) VALUES (3)")
-        conn.commit()
-
-    if current_version < 4:
-        # التحديث إلى الإصدار 4: إنشاء جداول جديدة
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS document_types (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT UNIQUE NOT NULL,
-                display_name TEXT NOT NULL,
-                description TEXT,
-                is_video_allowed INTEGER DEFAULT 0
-            )
-        """)
-        
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS optional_docs (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                hospital_type TEXT NOT NULL,
-                doc_type_name TEXT NOT NULL,
-                FOREIGN KEY (doc_type_name) REFERENCES document_types(name)
-            )
-        """)
-        
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS hospital_type_optional_docs (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                hospital_type TEXT NOT NULL,
-                doc_name TEXT NOT NULL,
-                UNIQUE(hospital_type, doc_name)
-            )
-        """)
-        
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS request_statuses (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT UNIQUE NOT NULL
-            )
-        """)
-        
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS status_settings (
-                status_name TEXT PRIMARY KEY,
-                prevents_new_request INTEGER DEFAULT 0,
-                blocks_service_for_days INTEGER DEFAULT 0,
-                is_final_state INTEGER DEFAULT 0,
-                FOREIGN KEY (status_name) REFERENCES request_statuses(name)
-            )
-        """)
-        
-        cur.execute("INSERT OR REPLACE INTO db_version (version) VALUES (4)")
-        conn.commit()
-
-    # 4. التأكد من وجود الجداول
-    if current_version < DB_SCHEMA_VERSION:
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS admins (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                username TEXT UNIQUE,
-                password_hash TEXT,
-                role TEXT DEFAULT 'admin'
-            )
-        """)
-        
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS hospitals (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL,
-                sector TEXT,
-                governorate TEXT,
-                code TEXT UNIQUE,
-                type TEXT DEFAULT 'خاص',
-                address TEXT,
-                other_branches TEXT,
-                other_branches_address TEXT,
-                license_start TEXT,
-                license_end TEXT,
-                manager_name TEXT,
-                manager_phone TEXT,
-                license_number TEXT,
-                username TEXT UNIQUE,
-                password_hash TEXT
-            )
-        """)
-        
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS services (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT UNIQUE,
-                active INTEGER DEFAULT 1
-            )
-        """)
-        
+        # جدول الطلبات
         cur.execute("""
             CREATE TABLE IF NOT EXISTS requests (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -945,48 +786,86 @@ def run_ddl():
                 admin_note TEXT,
                 created_at TEXT,
                 deleted_at TEXT,
-                closed_at TEXT,
+                closed_at TEXT, -- تاريخ إغلاق الطلب (مرفوض/مقبول/مغلق/...)
+                updated_at TEXT, -- تاريخ آخر تعديل
                 FOREIGN KEY (hospital_id) REFERENCES hospitals(id),
                 FOREIGN KEY (service_id) REFERENCES services(id)
             )
         """)
-        
+
+        # ترقية جدول الطلبات: إضافة عمود updated_at إذا لم يكن موجوداً
+        try:
+            cur.execute("SELECT updated_at FROM requests LIMIT 1")
+        except sqlite3.OperationalError as e:
+            if "no such column: updated_at" in str(e):
+                cur.execute("ALTER TABLE requests ADD COLUMN updated_at TEXT")
+                conn.commit()
+                print("تمت إضافة عمود 'updated_at' إلى جدول 'requests'.")
+            else:
+                raise e
+
+        # ترقية جدول الطلبات: إضافة عمود closed_at إذا لم يكن موجوداً
+        try:
+            cur.execute("SELECT closed_at FROM requests LIMIT 1")
+        except sqlite3.OperationalError as e:
+            if "no such column: closed_at" in str(e):
+                cur.execute("ALTER TABLE requests ADD COLUMN closed_at TEXT")
+                conn.commit()
+                print("تمت إضافة عمود 'closed_at' إلى جدول 'requests'.")
+            else:
+                raise e
+
+        # جدول المستندات (الذي تم تحديثه)
         cur.execute("""
             CREATE TABLE IF NOT EXISTS documents (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 request_id INTEGER,
-                doc_type TEXT,
-                display_name TEXT,
+                doc_type TEXT, -- الاسم الأصلي من قائمة المستندات
+                display_name TEXT, -- الاسم المعروض (يمكن تعديله)
                 file_name TEXT,
                 file_path TEXT,
                 required INTEGER DEFAULT 1,
                 satisfied INTEGER DEFAULT 0,
                 admin_comment TEXT,
                 uploaded_at TEXT,
-                is_video_allowed INTEGER DEFAULT 0,
+                is_video_allowed INTEGER DEFAULT 0, -- إضافة العمود الجديد للسماح بالفيديو
                 FOREIGN KEY (request_id) REFERENCES requests(id)
             )
         """)
-        
+
+        # ترقية جدول المستندات: إضافة عمود is_video_allowed إذا لم يكن موجوداً
+        try:
+            cur.execute("SELECT is_video_allowed FROM documents LIMIT 1")
+        except sqlite3.OperationalError as e:
+            if "no such column: is_video_allowed" in str(e):
+                cur.execute("ALTER TABLE documents ADD COLUMN is_video_allowed INTEGER DEFAULT 0")
+                conn.commit()
+                print("تمت إضافة عمود 'is_video_allowed' إلى جدول 'documents'.")
+            else:
+                raise e
+
+        # جدول أنواع المستندات (لإدارة أسماء المستندات وتفاصيلها)
         cur.execute("""
             CREATE TABLE IF NOT EXISTS document_types (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT UNIQUE NOT NULL,
-                display_name TEXT NOT NULL,
-                description TEXT,
-                is_video_allowed INTEGER DEFAULT 0
+                name TEXT UNIQUE NOT NULL, -- الاسم الأصلي
+                display_name TEXT NOT NULL, -- الاسم المعروض
+                description TEXT, -- وصف اختياري
+                is_video_allowed INTEGER DEFAULT 0 -- هل يسمح برفع فيديو لهذا النوع؟
             )
         """)
-        
+
+        # جدول إعدادات المستندات الاختيارية للatypes
         cur.execute("""
             CREATE TABLE IF NOT EXISTS optional_docs (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                hospital_type TEXT NOT NULL,
-                doc_type_name TEXT NOT NULL,
+                hospital_type TEXT NOT NULL, -- 'حكومي' أو 'خاص'
+                doc_type_name TEXT NOT NULL, -- الاسم الأصلي للمستند
                 FOREIGN KEY (doc_type_name) REFERENCES document_types(name)
             )
         """)
-        
+
+        # === تحديث مهم: جدول لربط أنواع المستشفيات بالمستندات الاختيارية ===
         cur.execute("""
             CREATE TABLE IF NOT EXISTS hospital_type_optional_docs (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -995,122 +874,153 @@ def run_ddl():
                 UNIQUE(hospital_type, doc_name)
             )
         """)
-        
+        # ================================================================
+
+        # جدول الميتا (لتخزين الإعدادات المتغيرة)
         cur.execute("""
             CREATE TABLE IF NOT EXISTS meta (
-                key TEXT PRIMARY KEY,
+                `key` TEXT PRIMARY KEY,
                 value TEXT
             )
         """)
-        
+
+        # جدول حالات الطلبات القابلة للتخصيص
         cur.execute("""
             CREATE TABLE IF NOT EXISTS request_statuses (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT UNIQUE NOT NULL
             )
         """)
-        
+
+        # جدول إعدادات الحالات (لتحديد السلوك)
         cur.execute("""
             CREATE TABLE IF NOT EXISTS status_settings (
                 status_name TEXT PRIMARY KEY,
-                prevents_new_request INTEGER DEFAULT 0,
-                blocks_service_for_days INTEGER DEFAULT 0,
-                is_final_state INTEGER DEFAULT 0,
+                prevents_new_request INTEGER DEFAULT 0, -- يمنع تقديم طلب جديد لنفس الخدمة
+                blocks_service_for_days INTEGER DEFAULT 0, -- يمنع تقديم طلب لنفس الخدمة لمدة X أيام
+                is_final_state INTEGER DEFAULT 0, -- حالة نهائية (تغلق الطلب)
                 FOREIGN KEY (status_name) REFERENCES request_statuses(name)
             )
         """)
+
+        conn.commit()
+
+        # --- التهيئة الأولية للبيانات (seeding/updating) ---
+        # seed default admin
+        cur.execute("SELECT COUNT(1) c FROM admins")
+        if cur.fetchone()["c"] == 0:
+            cur.execute("INSERT OR IGNORE INTO admins (username, password_hash, role) VALUES (?,?,?)",
+                       ("admin", hash_pw("admin123"), "admin"))
+            conn.commit()
+
+        # seed services
+        cur.execute("SELECT COUNT(1) c FROM services")
+        if cur.fetchone()["c"] == 0:
+            cur.executemany("INSERT OR IGNORE INTO services (name, active) VALUES (?,1)", [(s,) for s in DEFAULT_SERVICES])
+            conn.commit()
+
+        # seed hospital types
+        cur.execute("SELECT value FROM meta WHERE `key`='hospital_types'")
+        row = cur.fetchone()
+        if not row:
+            cur.execute("INSERT INTO meta (`key`, value) VALUES ('hospital_types', ?)", (",".join(DEFAULT_HOSPITAL_TYPES),))
+            conn.commit()
+
+        # seed sectors
+        cur.execute("SELECT value FROM meta WHERE `key`='sectors'")
+        row = cur.fetchone()
+        if not row:
+            cur.execute("INSERT INTO meta (`key`, value) VALUES ('sectors', ?)", (",".join(DEFAULT_SECTORS),))
+            conn.commit()
+
+        # seed governorates
+        cur.execute("SELECT value FROM meta WHERE `key`='governorates'")
+        row = cur.fetchone()
+        if not row:
+            cur.execute("INSERT INTO meta (`key`, value) VALUES ('governorates', ?)", (",".join(DEFAULT_GOVERNORATES),))
+            conn.commit()
+
+        # seed default request statuses if not exists
+        cur.execute("SELECT COUNT(1) c FROM request_statuses")
+        if cur.fetchone()["c"] == 0:
+            for status in DEFAULT_REQUEST_STATUSES:
+                 cur.execute("INSERT OR IGNORE INTO request_statuses (name) VALUES (?)", (status,))
+            conn.commit()
+
+        # seed default status settings if not exists
+        cur.execute("SELECT COUNT(1) c FROM status_settings")
+        if cur.fetchone()["c"] == 0:
+            # الحالات التي تمنع تقديم طلب جديد (مفتوحة)
+            open_statuses = {"جاري دراسة الطلب ومراجعة الأوراق", "جارِ المعاينة", "يجب استيفاء متطلبات التعاقد", "قيد الانتظار", "مقبول", "إعادة تقديم"}
+            # الحالات التي تمنع التقديم لمدة 3 أشهر
+            blocked_statuses = {"مرفوض", "إرجاء التعاقد"}
+            # الحالات النهائية
+            final_statuses = {"مقبول", "مرفوض", "مغلق", "إرجاء التعاقد", "لا يوجد حاجة للتعاقد"}
+
+            for status in DEFAULT_REQUEST_STATUSES:
+                prevents_new = 1 if status in open_statuses else 0
+                blocks_days = 90 if status in blocked_statuses else 0
+                is_final = 1 if status in final_statuses else 0
+                cur.execute("""
+                    INSERT OR IGNORE INTO status_settings (status_name, prevents_new_request, blocks_service_for_days, is_final_state)
+                    VALUES (?, ?, ?, ?)
+                """, (status, prevents_new, blocks_days, is_final))
+            conn.commit()
+
+        # seed default document types if not exists
+        cur.execute("SELECT COUNT(1) c FROM document_types")
+        if cur.fetchone()["c"] == 0:
+            video_allowed_docs = {"فيديو لغرف العمليات والإقامة"}
+            for doc in DOC_TYPES:
+                display_name = doc
+                is_video = 1 if doc in video_allowed_docs else 0
+                cur.execute("""
+                    INSERT OR IGNORE INTO document_types (name, display_name, is_video_allowed)
+                    VALUES (?, ?, ?)
+                """, (doc, display_name, is_video))
+            conn.commit()
+
+        # === تحديث مهم: seed/update default optional docs for hospital types ===
+        # الآن نقوم بتحديث أو إدخال المستندات الاختيارية لأنواع المستشفيات بناءً على الثوابت
+        # 1. تحديث المستندات الاختيارية للمستشفيات الحكومية
+        cur.execute("DELETE FROM hospital_type_optional_docs WHERE hospital_type = ?", ("حكومي",))
+        for doc_name in GOVERNMENT_OPTIONAL_DOCS:
+             if doc_name: # تجنب إدخال أسماء فارغة
+                 cur.execute("INSERT OR IGNORE INTO hospital_type_optional_docs (hospital_type, doc_name) VALUES (?, ?)", ("حكومي", doc_name))
+        conn.commit()
         
+        # 2. تحديث المستندات الاختيارية للمستشفيات الخاصة
+        cur.execute("DELETE FROM hospital_type_optional_docs WHERE hospital_type = ?", ("خاص",))
+        for doc_name in PRIVATE_OPTIONAL_DOCS:
+             if doc_name: # تجنب إدخال أسماء فارغة
+                 cur.execute("INSERT OR IGNORE INTO hospital_type_optional_docs (hospital_type, doc_name) VALUES (?, ?)", ("خاص", doc_name))
         conn.commit()
+        # =====================================================================
 
-    # 5. تحديث البيانات الأولية
-    # seed default admin
-    cur.execute("SELECT COUNT(1) c FROM admins")
-    if cur.fetchone()["c"] == 0:
-        cur.execute("INSERT OR IGNORE INTO admins (username, password_hash, role) VALUES (?,?,?)",
-                   ("admin", hash_pw("admin123"), "admin"))
+        # seed default optional docs if not exists (للحظات الانتقال)
+        cur.execute("SELECT COUNT(1) c FROM optional_docs")
+        if cur.fetchone()["c"] == 0:
+            for doc in GOVERNMENT_OPTIONAL_DOCS:
+                cur.execute("INSERT OR IGNORE INTO optional_docs (hospital_type, doc_type_name) VALUES (?, ?)", ("حكومي", doc))
+            # يمكن إضافة مستندات اختيارية للخاص هنا إذا لزم الأمر
+            for doc in PRIVATE_OPTIONAL_DOCS:
+                cur.execute("INSERT OR IGNORE INTO optional_docs (hospital_type, doc_type_name) VALUES (?, ?)", ("خاص", doc))
+            conn.commit()
+
+        # === تحديث مهم: تهيئة القيم الافتراضية للمستندات الاختيارية ===
+        # نتحقق مما إذا كانت هناك قيم موجودة بالفعل لتجنب الإدخال المكرر
+        cur.execute("SELECT COUNT(*) AS count FROM hospital_type_optional_docs")
+        if cur.fetchone()['count'] == 0:
+            # إدخال المستندات الاختيارية الافتراضية للمستشفيات الحكومية
+            for doc_name in GOVERNMENT_OPTIONAL_DOCS:
+                 cur.execute("INSERT OR IGNORE INTO hospital_type_optional_docs (hospital_type, doc_name) VALUES (?, ?)", ("حكومي", doc_name))
+            # إدخال المستندات الاختيارية الافتراضية للمستشفيات الخاصة
+            for doc_name in PRIVATE_OPTIONAL_DOCS:
+                 cur.execute("INSERT OR IGNORE INTO hospital_type_optional_docs (hospital_type, doc_name) VALUES (?, ?)", ("خاص", doc_name))
         conn.commit()
+        # ===============================================================
 
-    # seed services
-    cur.execute("SELECT COUNT(1) c FROM services")
-    if cur.fetchone()["c"] == 0:
-        cur.executemany("INSERT OR IGNORE INTO services (name, active) VALUES (?,1)", [(s,) for s in DEFAULT_SERVICES])
-        conn.commit()
-
-    # seed hospital types
-    cur.execute("SELECT value FROM meta WHERE key='hospital_types'")
-    row = cur.fetchone()
-    if not row:
-        cur.execute("INSERT INTO meta (key, value) VALUES ('hospital_types', ?)", (",".join(DEFAULT_HOSPITAL_TYPES),))
-        conn.commit()
-
-    # seed sectors
-    cur.execute("SELECT value FROM meta WHERE key='sectors'")
-    row = cur.fetchone()
-    if not row:
-        cur.execute("INSERT INTO meta (key, value) VALUES ('sectors', ?)", (",".join(DEFAULT_SECTORS),))
-        conn.commit()
-
-    # seed governorates
-    cur.execute("SELECT value FROM meta WHERE key='governorates'")
-    row = cur.fetchone()
-    if not row:
-        cur.execute("INSERT INTO meta (key, value) VALUES ('governorates', ?)", (",".join(DEFAULT_GOVERNORATES),))
-        conn.commit()
-
-    # ======== تحديث البيانات في جداول الحالات والمستندات ========
-    
-    # seed/update default request statuses 
-    for status in DEFAULT_REQUEST_STATUSES:
-         cur.execute("INSERT OR IGNORE INTO request_statuses (name) VALUES (?)", (status,))
-    conn.commit()
-
-    # seed/update default status settings 
-    open_statuses = {"جاري دراسة الطلب ومراجعة الأوراق", "جارِ المعاينة", "يجب استيفاء متطلبات التعاقد", "قيد الانتظار", "مقبول", "إعادة تقديم"}
-    blocked_statuses = {"مرفوض", "إرجاء التعاقد"}
-    final_statuses = {"مقبول", "مرفوض", "مغلق", "إرجاء التعاقد", "لا يوجد حاجة للتعاقد"}
-
-    for status in DEFAULT_REQUEST_STATUSES:
-        prevents_new = 1 if status in open_statuses else 0
-        blocks_days = 90 if status in blocked_statuses else 0
-        is_final = 1 if status in final_statuses else 0
-        cur.execute("""
-            INSERT INTO status_settings (status_name, prevents_new_request, blocks_service_for_days, is_final_state)
-            VALUES (?, ?, ?, ?)
-            ON CONFLICT(status_name) DO UPDATE SET
-            prevents_new_request=excluded.prevents_new_request,
-            blocks_service_for_days=excluded.blocks_service_for_days,
-            is_final_state=excluded.is_final_state
-        """, (status, prevents_new, blocks_days, is_final))
-    conn.commit()
-
-    # seed/update default document types
-    video_allowed_docs = {"فيديو لغرف العمليات والإقامة"}
-    for doc in DOC_TYPES:
-        display_name = doc
-        is_video = 1 if doc in video_allowed_docs else 0
-        cur.execute("""
-            INSERT INTO document_types (name, display_name, is_video_allowed)
-            VALUES (?, ?, ?)
-            ON CONFLICT(name) DO UPDATE SET
-            display_name=excluded.display_name,
-            is_video_allowed=excluded.is_video_allowed
-        """, (doc, display_name, is_video))
-    conn.commit()
-
-    # seed/update default optional docs for government hospitals
-    cur.execute("DELETE FROM hospital_type_optional_docs WHERE hospital_type = ?", ("حكومي",))
-    for doc_name in GOVERNMENT_OPTIONAL_DOCS:
-         cur.execute("SELECT id FROM document_types WHERE name = ?", (doc_name,))
-         if cur.fetchone():
-             cur.execute("INSERT OR IGNORE INTO hospital_type_optional_docs (hospital_type, doc_name) VALUES (?, ?)", ("حكومي", doc_name))
-    conn.commit()
-    
-    conn.commit()
-    conn.close()
-    
-    # وضع علامة على أنه تم التحقق من إصدار قاعدة البيانات
-    st.session_state.db_version_checked = True
-
+    # الاتصال يُغلق تلقائيًا عند الخروج من `with`
 # ---------------------------- صفحات المستشفى ---------------------------- #
 def hospital_home():
     user = st.session_state.user
@@ -1268,35 +1178,47 @@ def _get_documents_cached(request_id):
     conn.close()
     return docs # الآن docs قائمة من القواميس، وهي قابلة للتسلسل
 
-def documents_upload_ui(request_id: int, user: dict):
+# ... (imports and other functions) ...
+
+# في ملف waiting_list_contracts_app.py
+
+def documents_upload_ui(request_id: int, user: dict, is_active_edit: bool = False):
+    """واجهة رفع المستندات المطلوبة مع التحقق من رفع المستندات الإلزامية فقط."""
     st.markdown("<div class='subheader'>رفع المستندات المطلوبة</div>", unsafe_allow_html=True)
     
-    try:
-        docs = _get_documents_cached(request_id)
-    except:
-        # في حالة انتهاء صلاحية التخزين المؤقت
-        docs = _get_documents_cached(request_id)
-    
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM documents WHERE request_id=? ORDER BY id", (request_id,))
+    docs = cur.fetchall()
+    conn.close()
+
+    # ***تحديث مهم: متغير لتتبع ما إذا تم رفع كل المستندات المطلوبة فقط***
+    # الآن يعتمد على القيمة الفعلية من قاعدة البيانات وليس على حالة مخزنة في الجلسة
     all_required_uploaded = True 
     
     for doc in docs:
         cols = st.columns([3, 3, 2, 2, 2])
         with cols[0]:
             st.write(f"**{doc['display_name'] or doc['doc_type']}**")
+            # ***تحديث هنا: عرض الحالة الحالية من قاعدة البيانات***
             if doc['required']:
                  st.caption("مطلوب")
             else:
                  st.caption("اختياري")
         with cols[1]:
+            # تحديد أنواع الملفات المسموحة بناءً على إعدادات المستند
             allowed_types = ['pdf']
+            # التحقق من وجود العمود 'is_video_allowed' وقيمته بشكل آمن
             is_video_allowed_flag = doc['is_video_allowed'] if 'is_video_allowed' in doc.keys() else 0
+            
+            # ***تحديث مهم: التحقق مما إذا كان المستند مخصصًا فقط للفيديو***
             video_only = is_video_only_document(doc['doc_type'])
             
             if video_only:
                 allowed_types = ['mp4', 'avi', 'mov', 'wmv', 'flv', 'webm']
                 st.caption("أنواع الملفات المسموحة: فيديو فقط (MP4, AVI, MOV, WMV, FLV, WEBM)")
             elif is_video_allowed_flag:
-                allowed_types = ['pdf', 'mp4', 'avi', 'mov', 'wmv', 'flv', 'webm']
+                allowed_types.extend(['mp4', 'avi', 'mov', 'wmv', 'flv', 'webm'])
                 st.caption("أنواع الملفات المسموحة: PDF ومقاطع فيديو (MP4, AVI, MOV, WMV, FLV, WEBM)")
             else:
                 allowed_types = ['pdf']
@@ -1305,25 +1227,58 @@ def documents_upload_ui(request_id: int, user: dict):
             uploaded = st.file_uploader("رفع ملف", type=allowed_types, key=f"up_{doc['id']}")
 
             if uploaded is not None:
+                # ***تحديث مهم: التحقق من نوع الملف المرفوع***
                 if video_only:
-                    if not check_file_type(uploaded.name, True):
+                    if not check_file_type(uploaded.name, True): # يجب أن يكون فيديو
                         st.error("الرجاء رفع ملف فيديو فقط (MP4, AVI, MOV, WMV, FLV, WEBM)")
                     else:
                         save_uploaded_file(uploaded, user, request_id, doc)
                 elif is_video_allowed_flag:
-                    if not check_file_type(uploaded.name, True):
+                    if not check_file_type(uploaded.name, True): # يمكن أن يكون PDF أو فيديو
                         st.error(f"الرجاء رفع ملف بصيغة {' أو '.join(allowed_types).upper()}")
                     else:
                         save_uploaded_file(uploaded, user, request_id, doc)
                 else:
-                    if not uploaded.name.lower().endswith('.pdf'):
+                    if not uploaded.name.lower().endswith('.pdf'): # يجب أن يكون PDF فقط
                         st.error("الرجاء رفع ملف PDF فقط")
                     else:
                         save_uploaded_file(uploaded, user, request_id, doc)
 
         with cols[2]:
+            # === تحديث مهم: التحقق من وجود الملف قبل محاولة تنزيله ===
+            # هذا يمنع حدوث خطأ FileNotFoundError إذا تم حذف الملف fisically
             if doc["file_path"]:
-                st.download_button("تنزيل", data=open(doc["file_path"], "rb").read(), file_name=os.path.basename(doc["file_path"]))
+                try:
+                    # التحقق من أن الملف موجود فعليًا على القرص
+                    if os.path.exists(doc["file_path"]):
+                        # إذا كان موجودًا، عرض زر التنزيل
+                        with open(doc["file_path"], "rb") as f:
+                            st.download_button("تنزيل", data=f.read(), file_name=os.path.basename(doc["file_path"]), key=f"dl_{doc['id']}")
+                    else:
+                        # إذا لم يكن موجودًا، عرض رسالة للمستخدم
+                        st.warning("⚠️ الملف غير متوفر على القرص. يرجى رفع ملف جديد.")
+                        # ***تحديث مهم: مسح مسار الملف من قاعدة البيانات***
+                        # لأن الملف غير موجود فعليًا، من الأفضل مسح المسار المخزن في قاعدة البيانات
+                        # لتجنب محاولة الوصول إليه مرة أخرى في المستقبل
+                        conn = get_conn()
+                        cur = conn.cursor()
+                        cur.execute("UPDATE documents SET file_name=NULL, file_path=NULL WHERE id=?", (doc["id"],))
+                        conn.commit()
+                        conn.close()
+                        # إعادة تحميل الصفحة لتحديث العرض
+                        st.rerun()
+                except Exception as e:
+                    # في حالة حدوث أي خطأ آخر أثناء محاولة الوصول إلى الملف
+                    st.error(f"❌ خطأ في الوصول إلى الملف: {e}")
+                    # مسح المسار المخزن في قاعدة البيانات
+                    conn = get_conn()
+                    cur = conn.cursor()
+                    cur.execute("UPDATE documents SET file_name=NULL, file_path=NULL WHERE id=?", (doc["id"],))
+                    conn.commit()
+                    conn.close()
+                    # إعادة تحميل الصفحة لتحديث العرض
+                    st.rerun()
+            # =========================================================
         with cols[3]:
             if doc["file_path"]:
                 if st.button("حذف", key=f"del_{doc['id']}"):
@@ -1340,27 +1295,82 @@ def documents_upload_ui(request_id: int, user: dict):
         with cols[4]:
             st.write("✅ مستوفى" if doc["satisfied"] else "❌ غير مستوفى")
             
+            # ***تحديث مهم: التحقق من المستندات المطلوبة فقط***
+            # فقط المستندات المطلوبة (required = 1) تؤثر على تمكين زر الحفظ
+            # هذه القيمة تأتي الآن من قاعدة البيانات بعد التحديث بواسطة الأدمن
             if doc["required"] and not doc["file_path"]:
-                all_required_uploaded = False
+                all_required_uploaded = False # إذا كان مستند مطلوب غير مرفوع، قم بتعيين العلامة على False
 
-    if st.button("حفظ الطلب", disabled=not all_required_uploaded):
-        if not all_required_uploaded: 
-             st.error("لا يمكن حفظ الطلب: هناك مستندات مطلوبة لم يتم رفعها.")
-        else:
-            conn = get_conn()
-            cur = conn.cursor()
-            initial_status = get_request_statuses()[0] if get_request_statuses() else "جاري دراسة الطلب ومراجعة الأوراق"
-            cur.execute("UPDATE requests SET status=? WHERE id=?", (initial_status, request_id))
-            conn.commit()
-            conn.close()
-            st.success("تم حفظ الطلب بنجاح. سيتم مراجعته من قبل الإدارة.")
-            st.session_state.pop("active_request_id", None)
-            st.rerun()
-    elif not all_required_uploaded:
-        st.info("يرجى رفع جميع المستندات المطلوبة لتفعيل زر 'حفظ الطلب'.")
-    else:
-        pass   
-# ... (الجزء الأخير من الدالة كما هو) ...
+    # ***تحديث مهم: عرض زر الحفظ فقط إذا كان في وضع التحرير النشط***
+    if is_active_edit:
+        # زر حفظ الطلب يصبح نشطًا فقط بعد رفع كل المستندات المطلوبة (التي required = 1)
+        # المستندات الاختيارية (required = 0) لم تعد تمنع الحفظ
+        if st.button("حفظ الطلب", disabled=not all_required_uploaded):
+            # التحقق من المستندات المطلوبة لا يزال ضروريًا للحماية
+            if not all_required_uploaded: 
+                 st.error("لا يمكن حفظ الطلب: هناك مستندات مطلوبة لم يتم رفعها.")
+            else:
+                conn = get_conn()
+                cur = conn.cursor()
+                # تحديث حالة الطلب إلى الحالة الافتراضية الأولى بعد الإنشاء
+                # ***تحديث مهم: استخدام get_request_statuses() للحصول على القائمة الحالية***
+                statuses = get_request_statuses()
+                initial_status = statuses[0] if statuses else "جاري دراسة الطلب ومراجعة الأوراق"
+                # تحديث الحالة و updated_at
+                cur.execute("UPDATE requests SET status=?, updated_at=? WHERE id=?", (initial_status, datetime.now().isoformat(), request_id))
+                conn.commit()
+                conn.close()
+                st.success("تم حفظ الطلب بنجاح. سيتم مراجعته من قبل الإدارة.")
+                st.session_state.pop("active_request_id", None)
+                # ***تحديث مهم: تنظيف علامة التحرير النشط***
+                if f"editing_request_{request_id}" in st.session_state:
+                    st.session_state.pop(f"editing_request_{request_id}", None)
+                st.rerun() # إعادة التحميل لتحديث الواجهة
+        elif not all_required_uploaded:
+            # عرض رسالة فقط إذا كانت هناك مستندات مطلوبة ناقصة
+            st.info("يرجى رفع جميع المستندات المطلوبة لتفعيل زر 'حفظ الطلب'.")
+    # else:
+    #     # إذا لم يكن في وضع التحرير النشط، لا تظهر زر الحفظ
+    #     pass
+
+# ... (دالة save_uploaded_file كما هي) ...
+
+
+def save_uploaded_file(file, user: dict, request_id: int, doc_row):
+    """حفظ ملف مرفوع من قبل المستخدم."""
+    hospital_name = user["hospital_name"]
+    # ***تحديث مهم: قصر أسماء الملفات لتجنب مشاكل المسار***
+    dest_dir = STORAGE_DIR / safe_filename(hospital_name)[:50] / str(request_id) # قصر اسم المستشفى
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    # ***تحديث مهم: الحفاظ على امتداد الملف الأصلي***
+    fn = f"{safe_filename(doc_row['doc_type'])[:50]}{Path(file.name).suffix}" # قصر اسم نوع المستند واحتفاظ بالامتداد
+    dest_path = dest_dir / fn
+    try:
+        with open(dest_path, "wb") as f:
+            f.write(file.getbuffer())
+        conn = get_conn()
+        cur = conn.cursor()
+        # تحديث updated_at في جدول documents
+        cur.execute("""
+            UPDATE documents
+            SET file_name=?, file_path=?, uploaded_at=?
+            WHERE id=?
+        """, (fn, str(dest_path), datetime.now().isoformat(), doc_row["id"]))
+        # تحديث updated_at في جدول requests أيضًا
+        cur.execute("UPDATE requests SET updated_at=? WHERE id=?", (datetime.now().isoformat(), request_id))
+        conn.commit()
+        conn.close()
+        st.success(f"تم رفع الملف: {fn}")
+    except OSError as e:
+        st.error(f"❌ فشل رفع الملف '{fn}': {e}")
+        # محاولة حذف الملف الجزئي إن وجد
+        if dest_path.exists():
+            try:
+                dest_path.unlink()
+            except:
+                pass
+
+
         
 def save_uploaded_file(file, user: dict, request_id: int, doc_row):
     hospital_name = user["hospital_name"]
@@ -1403,11 +1413,19 @@ def hospital_requests_ui(user: dict):
         if pick != "—":
             request_details_ui(int(pick), role="hospital")
 
+# ... (الجزء العلوي من الدالة كما هو: استيراد البيانات وعرض معلومات الطلب) ...
+
+# في ملف waiting_list_contracts_app.py
+
+# في ملف waiting_list_contracts_app.py
+
 def request_details_ui(request_id: int, role: str = "hospital"):
+    """واجهة تفاصيل الطلب للمستخدم (المستشفى) مع التحكم في عرض زر الحفظ."""
     conn = get_conn()
     cur = conn.cursor()
     cur.execute("""
-        SELECT r.*, h.name AS hospital_name, h.type AS hospital_type, s.name AS service_name
+        SELECT r.*, h.name AS hospital_name, h.code AS hospital_code,
+               h.type AS hospital_type, s.name AS service_name
         FROM requests r
         JOIN hospitals h ON h.id=r.hospital_id
         JOIN services s ON s.id=r.service_id
@@ -1423,50 +1441,146 @@ def request_details_ui(request_id: int, role: str = "hospital"):
         return
 
     st.markdown(f"<div class='subheader'>تفاصيل الطلب #{request_id}</div>", unsafe_allow_html=True)
-    st.write(f"**المستشفى:** {r['hospital_name']} — **النوع:** {r['hospital_type']} — **الخدمة:** {r['service_name']} — **الفئة:** {r['age_category']}")
-    st.write(f"**الحالة الحالية:** {r['status']}")
+    st.write(f"**المستشفى:** {r['hospital_name']} — ({r['hospital_code']}) — **النوع:** {r['hospital_type']} — **الخدمة:** {r['service_name']} — **الفئة:** {r['age_category']}")
+
+    # === إضافة عرض تواريخ الطلب ===
+    try:
+        # التأكد من أن created_at و updated_at كائنات datetime
+        created_at_dt = r['created_at']
+        if isinstance(created_at_dt, str):
+            created_at_dt = datetime.fromisoformat(created_at_dt)
+            
+        info_text = f"**تاريخ التقديم:** {created_at_dt.strftime('%Y-%m-%d %H:%M:%S')}"
+
+        if r['updated_at']:
+            updated_at_dt = r['updated_at']
+            # التأكد من أنه كائن datetime
+            if isinstance(updated_at_dt, str):
+                updated_at_dt = datetime.fromisoformat(updated_at_dt)
+                
+            # عرض تاريخ التعديل فقط إذا كان مختلفًا عن تاريخ التقديم
+            # نستخدم total_seconds للتحقق من الفرق الزمني
+            if (updated_at_dt - created_at_dt).total_seconds() > 1: # فرق ثانية أو أكثر
+                updated_at_str = updated_at_dt.strftime('%Y-%m-%d %H:%M:%S')
+                info_text += f"  \n**آخر تعديل:** {updated_at_str}"
+            else:
+                info_text += "  \n*(لم يتم التعديل بعد)*"
+        else:
+            info_text += "  \n*(لم يتم التعديل بعد)*"
+            
+        st.info(info_text)
+    except Exception as e:
+        # في حالة وجود خطأ في تحويل التاريخ، عرض النصوص كما هي
+        st.info(f"**تاريخ التقديم:** {r['created_at']}  \n**آخر تعديل:** {r['updated_at'] or '(لم يتم التعديل بعد)'}")
+    # ===============================
 
     # السماح بالتعديل/الحذف فقط إذا كانت الحالة "طلب غير مكتمل" أو حالات محددة أخرى
     can_edit = r['status'] in ["طلب غير مكتمل", "جاري دراسة الطلب ومراجعة الأوراق", "يجب استيفاء متطلبات التعاقد"]
 
     if can_edit and role == "hospital":
         st.info("يمكنك تعديل أو حذف هذا الطلب لأن حالته 'طلب غير مكتمل' أو 'جارى دراسة الطلب ومراجعة الأوراق' أو 'يجب استيفاء متطلبات التعاقد'")
-        if st.button("🗑️ حذف الطلب"):
-            for d in docs:
-                if d['file_path'] and os.path.exists(d['file_path']):
-                    try:
-                        os.remove(d['file_path'])
-                    except:
-                        pass
-            conn = get_conn()
-            cur = conn.cursor()
-            cur.execute("DELETE FROM documents WHERE request_id=?", (request_id,))
-            cur.execute("DELETE FROM requests WHERE id=?", (request_id,))
-            conn.commit()
-            conn.close()
-            st.success("تم حذف الطلب بنجاح")
-            st.rerun()
-        if st.button("✏️ تعديل الطلب"):
-            st.session_state["active_request_id"] = request_id
-            st.rerun()
-        if st.session_state.get("active_request_id") == request_id:
-            documents_upload_ui(request_id, st.session_state.user)
+        col_del_edit, col_save_cancel = st.columns([1, 1])
+        with col_del_edit:
+            if st.button("🗑️ حذف الطلب"):
+                for d in docs:
+                    if d['file_path'] and os.path.exists(d['file_path']):
+                        try:
+                            os.remove(d['file_path'])
+                        except Exception:
+                            pass
+                conn = get_conn()
+                cur = conn.cursor()
+                cur.execute("DELETE FROM documents WHERE request_id=?", (request_id,))
+                cur.execute("DELETE FROM requests WHERE id=?", (request_id,))
+                conn.commit()
+                conn.close()
+                st.success("تم حذف الطلب بنجاح")
+                # تنظيف متغيرات الجلسة
+                st.session_state.pop("active_request_id", None)
+                if f"editing_request_{request_id}" in st.session_state:
+                    st.session_state.pop(f"editing_request_{request_id}", None)
+                st.rerun()
+            if st.button("✏️ تعديل الطلب"):
+                # ***تحديث مهم: تعيين علامة التحرير النشط***
+                st.session_state[f"editing_request_{request_id}"] = True
+                st.session_state["active_request_id"] = request_id
+                st.rerun()
+        
+        # ***تحديث مهم: التحقق مما إذا كان المستخدم في وضع التحرير النشط***
+        is_currently_editing = st.session_state.get(f"editing_request_{request_id}", False)
+        
+        # عرض واجهة رفع المستندات فقط إذا كان في وضع التحرير النشط
+        if st.session_state.get("active_request_id") == request_id and is_currently_editing:
+            # ***تحديث مهم: استدعاء documents_upload_ui مع تمرير علم is_active_edit=True***
+            documents_upload_ui(request_id, st.session_state.user, is_active_edit=True)
+        elif st.session_state.get("active_request_id") == request_id and not is_currently_editing:
+            # إذا كان الطلب نشطًا ولكن ليس في وضع التحرير، أظهر رسالة
+            st.info("لقد دخلت إلى واجهة تحرير الطلب. يرجى رفع المستندات المطلوبة ثم النقر على 'حفظ الطلب'.")
+            # عرض واجهة رفع المستندات بدون زر الحفظ النشط
+            documents_upload_ui(request_id, st.session_state.user, is_active_edit=False)
     else:
         st.markdown("##### المستندات")
         for d in docs:
             c1, c2, c3, c4, c5 = st.columns([3,2,2,2,3])
             with c1:
-                st.write(f"{d['display_name'] or d['doc_type']}")
+                display_name = d['display_name'] or d['doc_type']
+                st.write(display_name)
                 st.caption("مطلوب" if d['required'] else "اختياري")
             with c2:
-                if d['file_path']:
-                    st.download_button("تنزيل", data=open(d['file_path'], 'rb').read(), file_name=os.path.basename(d['file_path']), key=f"dl_{d['id']}")
+                # === تحديث مهم: التحقق من وجود الملف قبل محاولة تنزيله ===
+                # هذا يمنع حدوث خطأ FileNotFoundError إذا تم حذف الملف fisically
+                if d["file_path"]:
+                    try:
+                        # التحقق من أن الملف موجود فعليًا على القرص
+                        if os.path.exists(d["file_path"]):
+                            # إذا كان موجودًا، عرض زر التنزيل
+                            with open(d["file_path"], "rb") as f:
+                                st.download_button("تنزيل", data=f.read(), file_name=os.path.basename(d["file_path"]), key=f"dl_req_{d['id']}")
+                        else:
+                            # إذا لم يكن موجودًا، عرض رسالة للمستخدم
+                            st.warning("⚠️ الملف غير متوفر على القرص.")
+                            # ***تحديث مهم: مسح مسار الملف من قاعدة البيانات***
+                            # لأن الملف غير موجود فعليًا، من الأفضل مسح المسار المخزن في قاعدة البيانات
+                            # لتجنب محاولة الوصول إليه مرة أخرى في المستقبل
+                            conn = get_conn()
+                            cur = conn.cursor()
+                            cur.execute("UPDATE documents SET file_name=NULL, file_path=NULL WHERE id=?", (d["id"],))
+                            conn.commit()
+                            conn.close()
+                            # إعادة تحميل الصفحة لتحديث العرض
+                            st.rerun()
+                    except Exception as e:
+                        # في حالة حدوث أي خطأ آخر أثناء محاولة الوصول إلى الملف
+                        st.error(f"❌ خطأ في الوصول إلى الملف: {e}")
+                        # مسح المسار المخزن في قاعدة البيانات
+                        conn = get_conn()
+                        cur = conn.cursor()
+                        cur.execute("UPDATE documents SET file_name=NULL, file_path=NULL WHERE id=?", (d["id"],))
+                        conn.commit()
+                        conn.close()
+                        # إعادة تحميل الصفحة لتحديث العرض
+                        st.rerun()
+                # =========================================================
             with c3:
-                st.write("✅ مستوفى" if d['satisfied'] else "❌ غير مستوفى")
+                st.write("✅ مستوفى" if d["satisfied"] else "❌ غير مستوفى")
             with c4:
-                st.write(d['uploaded_at'] or "—")
+                # === تحديث مهم: التحقق من تواريخ المستندات ===
+                try:
+                    uploaded_at_dt = d['uploaded_at']
+                    if isinstance(uploaded_at_dt, str):
+                        uploaded_at_dt = datetime.fromisoformat(uploaded_at_dt)
+                    st.write(uploaded_at_dt.strftime('%Y-%m-%d %H:%M:%S') if uploaded_at_dt else "—")
+                except Exception:
+                    st.write(d['uploaded_at'].strftime('%Y-%m-%d %H:%M:%S') if d['uploaded_at'] else "—")
+                # =========================================================
             with c5:
                 st.write(d['admin_comment'] or "")
+
+    # ... (إجراءات الطلب: حذف نهائي، استرجاع، إغلاق) ...
+
+
+
+
 
 def resources_download_ui():
     st.markdown("<div class='subheader'>ملفات متوفرة للتنزيل</div>", unsafe_allow_html=True)
@@ -1657,7 +1771,7 @@ def admin_hospitals_ui():
             conn.close()
             st.success(f"تمت إضافة: {added} — تم التخطي (موجود): {skipped}")
             # تصدير ملف الاعتمادات
-            out_path = EXPORTS_DIR / f"credentials_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+            out_path = EXPORTS_DIR / f"credentials_{datetime.now().strftime('%Y%m%d_%H%M?')}.xlsx"
             df.to_excel(out_path, index=False)
             st.download_button("📥 تنزيل ملف الاعتمادات (username/password)", 
                              data=open(out_path, 'rb').read(), 
@@ -1954,7 +2068,12 @@ def admin_requests_ui():
             admin_request_detail_ui(int(pick))
 
 
+# ... (الجزء العلوي من الدالة كما هو: استيراد البيانات وعرض معلومات الطلب) ...
+
+# ... (الجزء العلوي من الدالة كما هو: استيراد البيانات وعرض معلومات الطلب) ...
+
 def admin_request_detail_ui(request_id: int):
+    """واجهة تفاصيل الطلب للمراجع/الأدمن مع تحديث تاريخ التعديل."""
     conn = get_conn()
     cur = conn.cursor()
     cur.execute("""
@@ -1975,7 +2094,7 @@ def admin_request_detail_ui(request_id: int):
         return
 
     st.markdown(f"<div class='subheader'>إدارة الطلب #{request_id}</div>", unsafe_allow_html=True)
-    st.write(f"**المستشفى:** {r['hospital_name']} — ({r['hospital_code']}) — **النوع:** {r['hospital_type']} — **الخدمة:** {r['service_name']} — **الفئة:** {r['age_category']}")
+    st.write(f"**المستشفى:** {r['hospital_name']} — ({r['hospital_code']}) — **النوع:** {r['hospital_type']} — **الخدمة:** {r['service_name']} — **الفئة:** {r['age_category']} — **الحالة الحالية:** {r['status']}")
 
     colA, colB = st.columns([2,3])
     with colA:
@@ -1987,19 +2106,22 @@ def admin_request_detail_ui(request_id: int):
             conn = get_conn()
             cur = conn.cursor()
             closed_at = None
+            # تحديث updated_at مع كل تغيير
+            updated_at = datetime.now().isoformat()
+            
             # إذا كانت الحالة الجديدة نهائية، قم بتحديث closed_at
             if is_final_status(new_status):
                 closed_at = datetime.now().isoformat()
-                cur.execute("UPDATE requests SET status=?, admin_note=?, closed_at=? WHERE id=?",
-                           (new_status, note, closed_at, request_id))
+                cur.execute("UPDATE requests SET status=?, admin_note=?, closed_at=?, updated_at=? WHERE id=?",
+                           (new_status, note, closed_at, updated_at, request_id))
             else:
                 # إذا تم تغيير الحالة من نهائية إلى غير نهائية، قم بمسح closed_at
                 if r['closed_at'] and not is_final_status(new_status):
-                     cur.execute("UPDATE requests SET status=?, admin_note=?, closed_at=NULL WHERE id=?",
-                                (new_status, note, request_id))
+                     cur.execute("UPDATE requests SET status=?, admin_note=?, closed_at=NULL, updated_at=? WHERE id=?",
+                                (new_status, note, updated_at, request_id))
                 else:
-                     cur.execute("UPDATE requests SET status=?, admin_note=? WHERE id=?",
-                                (new_status, note, request_id))
+                     cur.execute("UPDATE requests SET status=?, admin_note=?, updated_at=? WHERE id=?",
+                                (new_status, note, updated_at, request_id))
             conn.commit()
             conn.close()
             st.success("تم الحفظ")
@@ -2009,8 +2131,15 @@ def admin_request_detail_ui(request_id: int):
             buf = io.BytesIO()
             with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as zf:
                 for d in docs:
+                    # === تحديث مهم: التحقق من وجود الملف قبل محاولة إضافته إلى ZIP ===
+                    # هذا يمنع حدوث خطأ FileNotFoundError إذا تم حذف الملف fisically
                     if d['file_path'] and os.path.exists(d['file_path']):
-                        zf.write(d['file_path'], arcname=f"{safe_filename(d['doc_type'])}{Path(d['file_path']).suffix}")
+                        try:
+                            zf.write(d['file_path'], arcname=f"{safe_filename(d['doc_type'])}{Path(d['file_path']).suffix}")
+                        except Exception as e:
+                            # في حالة حدوث خطأ، تجاهل الملف وتابع
+                            pass
+                    # =========================================================
             buf.seek(0)
             st.download_button("📥 تحميل الملفات", data=buf,
                              file_name=f"request_{request_id}_files.zip")
@@ -2019,37 +2148,73 @@ def admin_request_detail_ui(request_id: int):
     for d in docs:
         c1, c2, c3, c4, c5, c6 = st.columns([3,2,2,2,3,3])
         with c1:
-            # عرض الاسم المعروض إذا كان موجودًا، وإلا استخدم الاسم الأصلي
             display_name = d['display_name'] or d['doc_type']
             st.write(display_name)
-            req_toggle = st.checkbox("مطلوب؟", value=bool(d['required']), key=f"req_{d['id']}")
+            st.caption("مطلوب" if d['required'] else "اختياري")
+            # ***تحديث مهم: إضافة checkbox لتعديل required من واجهة الأدمن***
+            # هذا يتيح للأدمن تغيير حالة المستند من مطلوب إلى اختياري والعكس
+            req_toggle_admin = st.checkbox("مطلوب؟", value=bool(d['required']), key=f"req_admin_{d['id']}")
         with c2:
             sat_toggle = st.checkbox("مستوفى؟", value=bool(d['satisfied']), key=f"sat_{d['id']}")
         with c3:
-            if d['file_path']:
-                st.download_button("تنزيل", data=open(d['file_path'], 'rb').read(),
-                                 file_name=os.path.basename(d['file_path']), key=f"dl_{d['id']}")
-        with c4:
-            if d['file_path'] and st.button("حذف", key=f"del_{d['id']}"):
+            # === تحديث مهم: التحقق من وجود الملف قبل محاولة تنزيله ===
+            # هذا يمنع حدوث خطأ FileNotFoundError إذا تم حذف الملف fisically
+            if d["file_path"]:
                 try:
-                    os.remove(d['file_path'])
-                except Exception:
-                    pass
-                conn = get_conn()
-                cur = conn.cursor()
-                cur.execute("UPDATE documents SET file_name=NULL, file_path=NULL WHERE id=?", (d['id'],))
-                conn.commit()
-                conn.close()
-                st.rerun()
+                    # التحقق من أن الملف موجود فعليًا على القرص
+                    if os.path.exists(d["file_path"]):
+                        # إذا كان موجودًا، عرض زر التنزيل
+                        with open(d["file_path"], "rb") as f:
+                            st.download_button("تنزيل", data=f.read(), file_name=os.path.basename(d["file_path"]), key=f"dl_admin_{d['id']}")
+                    else:
+                        # إذا لم يكن موجودًا، عرض رسالة للمستخدم
+                        st.warning("⚠️ الملف غير متوفر على القرص.")
+                        # ***تحديث مهم: مسح مسار الملف من قاعدة البيانات***
+                        # لأن الملف غير موجود فعليًا، من الأفضل مسح المسار المخزن في قاعدة البيانات
+                        # لتجنب محاولة الوصول إليه مرة أخرى في المستقبل
+                        conn = get_conn()
+                        cur = conn.cursor()
+                        cur.execute("UPDATE documents SET file_name=NULL, file_path=NULL WHERE id=?", (d["id"],))
+                        conn.commit()
+                        conn.close()
+                        # إعادة تحميل الصفحة لتحديث العرض
+                        st.rerun()
+                except Exception as e:
+                    # في حالة حدوث أي خطأ آخر أثناء محاولة الوصول إلى الملف
+                    st.error(f"❌ خطأ في الوصول إلى الملف: {e}")
+                    # مسح المسار المخزن في قاعدة البيانات
+                    conn = get_conn()
+                    cur = conn.cursor()
+                    cur.execute("UPDATE documents SET file_name=NULL, file_path=NULL WHERE id=?", (d["id"],))
+                    conn.commit()
+                    conn.close()
+                    # إعادة تحميل الصفحة لتحديث العرض
+                    st.rerun()
+            # =========================================================
+        with c4:
+            if d["file_path"]:
+                if st.button("حذف", key=f"del_{d['id']}"):
+                    try:
+                        os.remove(d["file_path"]) if os.path.exists(d["file_path"]) else None
+                    except Exception:
+                        pass
+                    conn = get_conn()
+                    cur = conn.cursor()
+                    cur.execute("UPDATE documents SET file_name=NULL, file_path=NULL WHERE id=?", (d["id"],))
+                    conn.commit()
+                    conn.close()
+                    st.rerun()
         with c5:
             comment = st.text_input("تعليق", value=d['admin_comment'] or "", key=f"cm_{d['id']}")
         with c6:
             if st.button("حفظ", key=f"save_{d['id']}"):
                 conn = get_conn()
                 cur = conn.cursor()
+                # ***تحديث مهم: حفظ القيمة الجديدة لـ required من checkbox ***
+                new_required_value = 1 if req_toggle_admin else 0
                 cur.execute("""
                     UPDATE documents SET required=?, satisfied=?, admin_comment=? WHERE id=?
-                """, (1 if req_toggle else 0, 1 if sat_toggle else 0, comment, d['id']))
+                """, (new_required_value, 1 if sat_toggle else 0, comment, d['id']))
                 conn.commit()
                 conn.close()
                 st.success("تم التحديث")
@@ -2066,7 +2231,8 @@ def admin_request_detail_ui(request_id: int):
                         pass
             conn = get_conn()
             cur = conn.cursor()
-            cur.execute("UPDATE requests SET deleted_at=? WHERE id=?", (datetime.now().isoformat(), request_id))
+            # استخدام updated_at هنا أيضًا
+            cur.execute("UPDATE requests SET deleted_at=?, updated_at=? WHERE id=?", (datetime.now().isoformat(), datetime.now().isoformat(), request_id))
             conn.commit()
             conn.close()
             st.success("تم الحذف النهائي. يمكن للمستشفى تقديم طلب جديد لنفس الخدمة الآن.")
@@ -2075,7 +2241,8 @@ def admin_request_detail_ui(request_id: int):
         if st.button("🔄 استرجاع كـ 'إعادة تقديم'"):
             conn = get_conn()
             cur = conn.cursor()
-            cur.execute("UPDATE requests SET status='إعادة تقديم', deleted_at=NULL WHERE id=?", (request_id,))
+            # استخدام updated_at هنا أيضًا
+            cur.execute("UPDATE requests SET status='إعادة تقديم', deleted_at=NULL, updated_at=? WHERE id=?", (datetime.now().isoformat(), request_id))
             conn.commit()
             conn.close()
             st.success("تم الاسترجاع")
@@ -2084,12 +2251,15 @@ def admin_request_detail_ui(request_id: int):
         if st.button("🔒 إغلاق الطلب"):
             conn = get_conn()
             cur = conn.cursor()
-            # استخدام حالة "مغلق" أو الحالة النهائية المناسبة
             final_status = "مغلق"
-            cur.execute("UPDATE requests SET status=?, closed_at=? WHERE id=?", (final_status, datetime.now().isoformat(), request_id))
+            # استخدام updated_at هنا أيضًا
+            cur.execute("UPDATE requests SET status=?, closed_at=?, updated_at=? WHERE id=?", (final_status, datetime.now().isoformat(), datetime.now().isoformat(), request_id))
             conn.commit()
             conn.close()
             st.success("تم الإغلاق — يمكن تقديم طلب جديد")
+
+# ... (الجزء السفلي من الدالة كما هو) ...
+
 
 # ... (تستمر في القسم التالي)
 # ... (متابعة من القسم 5)
