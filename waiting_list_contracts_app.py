@@ -1179,6 +1179,9 @@ def documents_upload_ui(request_id: int, user: dict, is_active_edit: bool = Fals
                     with get_conn() as conn:
                         conn.execute("UPDATE documents SET file_name=NULL, file_path=NULL, satisfied=0 WHERE id=?", (doc["id"],))
                         conn.commit()
+                    # مسح الذاكرة المؤقتة
+                    if hasattr(st, 'cache_data'):
+                        st.cache_data.clear()
                     st.rerun()
         with cols[4]:
             st.write("✅ مستوفى" if doc["satisfied"] else "❌ غير مستوفى")
@@ -1236,6 +1239,10 @@ def save_uploaded_file(file, user: dict, request_id: int, doc_row):
             )
             conn.execute("UPDATE requests SET updated_at=? WHERE id=?", (now_iso, request_id))
             conn.commit()
+        
+        # مسح الذاكرة المؤقتة لضمان تحديث البيانات
+        if hasattr(st, 'cache_data'):
+            st.cache_data.clear()
         
         return True
         
@@ -1357,6 +1364,9 @@ def request_details_ui(request_id: int, role: str = "hospital"):
                 st.session_state.pop("active_request_id", None)
                 if f"editing_request_{request_id}" in st.session_state:
                     st.session_state.pop(f"editing_request_{request_id}", None)
+                # مسح الذاكرة المؤقتة
+                if hasattr(st, 'cache_data'):
+                    st.cache_data.clear()
                 st.rerun()
 
     if can_edit and role == "hospital":
@@ -1899,6 +1909,9 @@ def admin_request_detail_ui(request_id: int):
                 conn.commit()
             log_activity("حذف طلب نهائي", f"طلب رقم: {request_id}")
             st.success("تم الحذف النهائي. يمكن للمستشفى تقديم طلب جديد لنفس الخدمة الآن.")
+            # مسح الذاكرة المؤقتة
+            if hasattr(st, 'cache_data'):
+                st.cache_data.clear()
             st.rerun()
     with cols[1]:
         if st.button("🔄 استرجاع كـ 'إعادة تقديم'"):
@@ -1907,6 +1920,9 @@ def admin_request_detail_ui(request_id: int):
                 conn.commit()
             log_activity("استرجاع طلب", f"طلب رقم: {request_id}")
             st.success("تم الاسترجاع")
+            # مسح الذاكرة المؤقتة
+            if hasattr(st, 'cache_data'):
+                st.cache_data.clear()
             st.rerun()
     with cols[2]:
         if st.button("🔒 إغلاق الطلب"):
@@ -1916,6 +1932,9 @@ def admin_request_detail_ui(request_id: int):
                 conn.commit()
             log_activity("إغلاق طلب", f"طلب رقم: {request_id}")
             st.success("تم الإغلاق — يمكن تقديم طلب جديد")
+            # مسح الذاكرة المؤقتة
+            if hasattr(st, 'cache_data'):
+                st.cache_data.clear()
 
 def admin_activity_log_ui():
     """واجهة عرض سجل نشاط المستخدمين للمدير."""
