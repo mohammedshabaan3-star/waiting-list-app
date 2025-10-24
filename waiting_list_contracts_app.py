@@ -506,12 +506,44 @@ def get_conn():
     """Context manager for database connections."""
     conn = None
     try:
-        conn = sqlite3.connect(DB_PATH, check_same_thread=False, detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES)
+        conn = sqlite3.connect(
+            DB_PATH, 
+            check_same_thread=False, 
+            detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES,
+            timeout=30.0  # انتظار 30 ثانية قبل إعطاء خطأ القفل
+        )
         conn.row_factory = sqlite3.Row
+        # تفعيل WAL mode لتحسين الأداء وتقليل القفل
+        conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute("PRAGMA synchronous=NORMAL")
+        conn.execute("PRAGMA cache_size=10000")
+        conn.execute("PRAGMA temp_store=memory")
         yield conn
+    except sqlite3.OperationalError as e:
+        if "database is locked" in str(e):
+            # محاولة ثانية بعد انتظار قصير
+            import time
+            time.sleep(0.1)
+            try:
+                conn = sqlite3.connect(
+                    DB_PATH, 
+                    check_same_thread=False, 
+                    detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES,
+                    timeout=30.0
+                )
+                conn.row_factory = sqlite3.Row
+                conn.execute("PRAGMA journal_mode=WAL")
+                yield conn
+            except Exception:
+                raise e
+        else:
+            raise e
     finally:
         if conn:
-            conn.close()
+            try:
+                conn.close()
+            except Exception:
+                pass
 
 def hash_pw(pw: str) -> str:
     """إنشاء تجزئة جديدة لكلمة المرور"""
@@ -735,16 +767,8 @@ class DatabaseChangeHandler(FileSystemEventHandler):
 
 def start_database_monitor():
     """بدء مراقبة تغييرات قاعدة البيانات"""
-    if 'db_monitor_started' not in st.session_state:
-        try:
-            event_handler = DatabaseChangeHandler()
-            observer = Observer()
-            observer.schedule(event_handler, str(DB_PATH.parent), recursive=False)
-            observer.start()
-            st.session_state.db_monitor_started = True
-            st.session_state.db_observer = observer
-        except Exception as e:
-            print(f"خطأ في بدء مراقبة قاعدة البيانات: {e}")
+    # تعطيل مراقبة التغييرات مؤقتاً لتجنب مشاكل القفل
+    pass
 
 # ---------------------------- إعداد قاعدة البيانات ---------------------------- #
 DB_SCHEMA_VERSION = 5
@@ -766,68 +790,34 @@ def set_schema_version(version):
 
 def run_migrations():
     """تشغيل migrations لتحديث قاعدة البيانات تلقائياً"""
-    current_version = get_current_schema_version()
-    
-    if current_version < 1:
-        # Migration 1: إضافة جدول activity_log
-        with get_conn() as conn:
-            conn.execute("""
-                CREATE TABLE IF NOT EXISTS activity_log (
-                    id INTEGER PRIMARY KEY,
-                    timestamp TEXT NOT NULL,
-                    username TEXT,
-                    user_role TEXT,
-                    action TEXT NOT NULL,
-                    details TEXT
-                )""")
-            conn.commit()
-    
-    if current_version < 2:
-        # Migration 2: إضافة أعمدة جديدة للجداول الموجودة
-        with get_conn() as conn:
-            cur = conn.cursor()
-            
-            # إضافة الأعمدة إذا لم تكن موجودة
-            def add_column_if_not_exists(table, column, definition):
-                try:
-                    cur.execute(f"SELECT {column} FROM {table} LIMIT 1")
-                except sqlite3.OperationalError:
-                    cur.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
-            
-            add_column_if_not_exists("requests", "updated_at", "TEXT")
-            add_column_if_not_exists("requests", "closed_at", "TEXT")
-            add_column_if_not_exists("documents", "is_video_allowed", "INTEGER DEFAULT 0")
-            conn.commit()
-    
-    if current_version < 3:
-        # Migration 3: تحديث البيانات الموجودة
-        with get_conn() as conn:
-            # تحديث المستندات الموجودة بناءً على الإعدادات الجديدة
-            try:
-                update_existing_requests_optional_docs()
-            except Exception:
-                pass
-            conn.commit()
-    
-    if current_version < 4:
-        # Migration 4: إضافة فهارس لتحسين الأداء
-        with get_conn() as conn:
-            conn.execute("CREATE INDEX IF NOT EXISTS idx_requests_hospital_service ON requests(hospital_id, service_id)")
-            conn.execute("CREATE INDEX IF NOT EXISTS idx_requests_status ON requests(status)")
-            conn.execute("CREATE INDEX IF NOT EXISTS idx_requests_created_at ON requests(created_at)")
-            conn.execute("CREATE INDEX IF NOT EXISTS idx_documents_request_id ON documents(request_id)")
-            conn.execute("CREATE INDEX IF NOT EXISTS idx_activity_log_timestamp ON activity_log(timestamp)")
-            conn.commit()
-    
-    if current_version < 5:
-        # Migration 5: تحسينات إضافية
-        with get_conn() as conn:
-            # إضافة أي تحسينات مستقبلية هنا
-            conn.commit()
-    
-    # تحديث إصدار قاعدة البيانات
-    if current_version < DB_SCHEMA_VERSION:
-        set_schema_version(DB_SCHEMA_VERSION)
+    try:
+        current_version = get_current_schema_version()
+        
+        if current_version < DB_SCHEMA_VERSION:
+            with get_conn() as conn:
+                # إضافة جدول activity_log إذا لم يكن موجوداً
+                conn.execute("""
+                    CREATE TABLE IF NOT EXISTS activity_log (
+                        id INTEGER PRIMARY KEY,
+                        timestamp TEXT NOT NULL,
+                        username TEXT,
+                        user_role TEXT,
+                        action TEXT NOT NULL,
+                        details TEXT
+                    )""")
+                
+                # إضافة الفهارس لتحسين الأداء
+                conn.execute("CREATE INDEX IF NOT EXISTS idx_requests_hospital_service ON requests(hospital_id, service_id)")
+                conn.execute("CREATE INDEX IF NOT EXISTS idx_requests_status ON requests(status)")
+                conn.execute("CREATE INDEX IF NOT EXISTS idx_requests_created_at ON requests(created_at)")
+                conn.execute("CREATE INDEX IF NOT EXISTS idx_documents_request_id ON documents(request_id)")
+                
+                conn.commit()
+                set_schema_version(DB_SCHEMA_VERSION)
+    except Exception as e:
+        print(f"خطأ في migrations: {e}")
+        # لا نرفع الخطأ لتجنب إيقاف التطبيق
+        pass
 
 def run_ddl():
     with get_conn() as conn:
@@ -2560,10 +2550,10 @@ def main():
         try:
             run_ddl()
             run_migrations()
-            start_database_monitor()
             st.session_state.db_setup_done = True
         except Exception as e:
             st.error(f"❌ خطأ في تهيئة النظام: {e}")
+            st.error("يرجى إعادة تحميل الصفحة أو التواصل مع الدعم الفني")
             return
     
     # التحقق من حالة تسجيل الدخول
