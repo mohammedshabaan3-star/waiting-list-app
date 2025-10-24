@@ -20,6 +20,10 @@ from streamlit_option_menu import option_menu
 import plotly.express as px
 import plotly.graph_objects as go
 import secrets
+import time
+import threading
+from watchdog.observers import Observer
+from watchdog.events import FileSystemEventHandler
 
 # ---------------------------- إعدادات أساسية ---------------------------- #
 APP_TITLE = "المشروع القومي لقوائم الانتظار - التعاقد على الخدمات الجراحية"
@@ -557,6 +561,9 @@ def set_hospital_types(types: list):
         conn.execute("INSERT INTO meta(key,value) VALUES('hospital_types', ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
                     (",".join(types),))
         conn.commit()
+    # مسح الذاكرة المؤقتة لضمان تحديث البيانات
+    if hasattr(st, 'cache_data'):
+        st.cache_data.clear()
 
 def get_sectors() -> list:
     return get_list_from_meta('sectors', DEFAULT_SECTORS)
@@ -566,6 +573,9 @@ def set_sectors(sectors: list):
         conn.execute("INSERT INTO meta(key,value) VALUES('sectors', ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
                     (",".join(sectors),))
         conn.commit()
+    # مسح الذاكرة المؤقتة
+    if hasattr(st, 'cache_data'):
+        st.cache_data.clear()
 
 def get_governorates() -> list:
     return get_list_from_meta('governorates', DEFAULT_GOVERNORATES)
@@ -575,6 +585,9 @@ def set_governorates(gov: list):
         conn.execute("INSERT INTO meta(key,value) VALUES('governorates', ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
                     (",".join(gov),))
         conn.commit()
+    # مسح الذاكرة المؤقتة
+    if hasattr(st, 'cache_data'):
+        st.cache_data.clear()
 
 def get_request_statuses() -> list:
     with get_conn() as conn:
@@ -617,6 +630,11 @@ def set_optional_docs_for_type(hospital_type: str, doc_names: list):
             conn.executemany("INSERT OR IGNORE INTO hospital_type_optional_docs (hospital_type, doc_name) VALUES (?, ?)", 
                              [(hospital_type, name) for name in doc_names if name])
         conn.commit()
+    # تحديث الطلبات الموجودة تلقائياً
+    update_existing_requests_optional_docs()
+    # مسح الذاكرة المؤقتة
+    if hasattr(st, 'cache_data'):
+        st.cache_data.clear()
 
 def ensure_request_docs(request_id: int, hospital_type: str):
     with get_conn() as conn:
@@ -691,8 +709,125 @@ def is_hospital_profile_complete(hospital_id: int) -> bool:
         
         return all(field and str(field).strip() for field in required_fields)
 
+# ---------------------------- نظام مراقبة التغييرات ---------------------------- #
+class DatabaseChangeHandler(FileSystemEventHandler):
+    """مراقب تغييرات قاعدة البيانات"""
+    
+    def __init__(self):
+        self.last_modified = time.time()
+        self.debounce_time = 1.0  # ثانية واحدة لتجنب التحديثات المتعددة
+    
+    def on_modified(self, event):
+        if event.is_directory:
+            return
+        
+        current_time = time.time()
+        if current_time - self.last_modified > self.debounce_time:
+            self.last_modified = current_time
+            # تشغيل migrations عند تغيير قاعدة البيانات
+            try:
+                run_migrations()
+                # مسح الذاكرة المؤقتة لضمان تحديث البيانات
+                if hasattr(st, 'cache_data'):
+                    st.cache_data.clear()
+            except Exception as e:
+                print(f"خطأ في تحديث قاعدة البيانات: {e}")
+
+def start_database_monitor():
+    """بدء مراقبة تغييرات قاعدة البيانات"""
+    if 'db_monitor_started' not in st.session_state:
+        try:
+            event_handler = DatabaseChangeHandler()
+            observer = Observer()
+            observer.schedule(event_handler, str(DB_PATH.parent), recursive=False)
+            observer.start()
+            st.session_state.db_monitor_started = True
+            st.session_state.db_observer = observer
+        except Exception as e:
+            print(f"خطأ في بدء مراقبة قاعدة البيانات: {e}")
+
 # ---------------------------- إعداد قاعدة البيانات ---------------------------- #
-DB_SCHEMA_VERSION = 4
+DB_SCHEMA_VERSION = 5
+
+def get_current_schema_version():
+    """الحصول على إصدار قاعدة البيانات الحالي"""
+    try:
+        with get_conn() as conn:
+            result = conn.execute("SELECT value FROM meta WHERE key='schema_version'").fetchone()
+            return int(result['value']) if result else 0
+    except:
+        return 0
+
+def set_schema_version(version):
+    """تحديث إصدار قاعدة البيانات"""
+    with get_conn() as conn:
+        conn.execute("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', ?)", (str(version),))
+        conn.commit()
+
+def run_migrations():
+    """تشغيل migrations لتحديث قاعدة البيانات تلقائياً"""
+    current_version = get_current_schema_version()
+    
+    if current_version < 1:
+        # Migration 1: إضافة جدول activity_log
+        with get_conn() as conn:
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS activity_log (
+                    id INTEGER PRIMARY KEY,
+                    timestamp TEXT NOT NULL,
+                    username TEXT,
+                    user_role TEXT,
+                    action TEXT NOT NULL,
+                    details TEXT
+                )""")
+            conn.commit()
+    
+    if current_version < 2:
+        # Migration 2: إضافة أعمدة جديدة للجداول الموجودة
+        with get_conn() as conn:
+            cur = conn.cursor()
+            
+            # إضافة الأعمدة إذا لم تكن موجودة
+            def add_column_if_not_exists(table, column, definition):
+                try:
+                    cur.execute(f"SELECT {column} FROM {table} LIMIT 1")
+                except sqlite3.OperationalError:
+                    cur.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
+            
+            add_column_if_not_exists("requests", "updated_at", "TEXT")
+            add_column_if_not_exists("requests", "closed_at", "TEXT")
+            add_column_if_not_exists("documents", "is_video_allowed", "INTEGER DEFAULT 0")
+            conn.commit()
+    
+    if current_version < 3:
+        # Migration 3: تحديث البيانات الموجودة
+        with get_conn() as conn:
+            # تحديث المستندات الموجودة بناءً على الإعدادات الجديدة
+            try:
+                update_existing_requests_optional_docs()
+            except Exception:
+                pass
+            conn.commit()
+    
+    if current_version < 4:
+        # Migration 4: إضافة فهارس لتحسين الأداء
+        with get_conn() as conn:
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_requests_hospital_service ON requests(hospital_id, service_id)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_requests_status ON requests(status)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_requests_created_at ON requests(created_at)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_documents_request_id ON documents(request_id)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_activity_log_timestamp ON activity_log(timestamp)")
+            conn.commit()
+    
+    if current_version < 5:
+        # Migration 5: تحسينات إضافية
+        with get_conn() as conn:
+            # إضافة أي تحسينات مستقبلية هنا
+            conn.commit()
+    
+    # تحديث إصدار قاعدة البيانات
+    if current_version < DB_SCHEMA_VERSION:
+        set_schema_version(DB_SCHEMA_VERSION)
 
 def run_ddl():
     with get_conn() as conn:
@@ -709,25 +844,8 @@ def run_ddl():
         cur.execute("""CREATE TABLE IF NOT EXISTS request_statuses (id INTEGER PRIMARY KEY, name TEXT UNIQUE NOT NULL)""")
         cur.execute("""CREATE TABLE IF NOT EXISTS status_settings (status_name TEXT PRIMARY KEY, prevents_new_request INTEGER DEFAULT 0, blocks_service_for_days INTEGER DEFAULT 0, is_final_state INTEGER DEFAULT 0, FOREIGN KEY (status_name) REFERENCES request_statuses(name) ON DELETE CASCADE)""")
 
-        # --- إضافة جديدة: جدول سجل النشاط ---
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS activity_log (
-                id INTEGER PRIMARY KEY,
-                timestamp TEXT NOT NULL,
-                username TEXT,
-                user_role TEXT,
-                action TEXT NOT NULL,
-                details TEXT
-            )""")
-        def add_column_if_not_exists(table, column, definition):
-            try:
-                cur.execute(f"SELECT {column} FROM {table} LIMIT 1")
-            except sqlite3.OperationalError:
-                cur.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
-        
-        add_column_if_not_exists("requests", "updated_at", "TEXT")
-        add_column_if_not_exists("requests", "closed_at", "TEXT")
-        add_column_if_not_exists("documents", "is_video_allowed", "INTEGER DEFAULT 0")
+        # سيتم إنشاء الجداول والأعمدة الإضافية في نظام migrations
+        pass
 
         if cur.execute("SELECT COUNT(1) FROM admins").fetchone()[0] == 0:
             cur.execute("INSERT INTO admins (username, password_hash, role) VALUES (?,?,?)", ("admin", hash_pw("admin123"), "admin"))
@@ -755,11 +873,8 @@ def run_ddl():
             cur.executemany("INSERT INTO hospital_type_optional_docs (hospital_type, doc_name) VALUES (?, ?)", 
                             [("حكومي", d) for d in GOVERNMENT_OPTIONAL_DOCS] + [("خاص", d) for d in PRIVATE_OPTIONAL_DOCS])
         
-        # تحديث المستندات الموجودة في الطلبات عند بدء التشغيل
-        try:
-            update_existing_requests_optional_docs()
-        except Exception:
-            pass  # تجاهل الأخطاء في التحديث الأولي
+        # سيتم تحديث المستندات في نظام migrations
+        pass
         
         conn.commit()
 
@@ -1083,6 +1198,10 @@ def documents_upload_ui(request_id: int, user: dict, is_active_edit: bool = Fals
                 st.session_state.pop("active_request_id", None)
                 if f"editing_request_{request_id}" in st.session_state:
                     st.session_state.pop(f"editing_request_{request_id}", None)
+                # مسح الذاكرة المؤقتة لضمان تحديث البيانات
+                if hasattr(st, 'cache_data'):
+                    st.cache_data.clear()
+                time.sleep(0.5)
                 st.rerun()
         elif not all_required_uploaded:
             st.info("يرجى رفع جميع المستندات المطلوبة لتفعيل زر 'حفظ الطلب'.")
@@ -1698,6 +1817,10 @@ def admin_request_detail_ui(request_id: int):
                 conn.commit()
             log_activity("تحديث حالة طلب", f"طلب رقم: {request_id}، الحالة الجديدة: {new_status}")
             st.success("تم الحفظ")
+            # مسح الذاكرة المؤقتة
+            if hasattr(st, 'cache_data'):
+                st.cache_data.clear()
+            time.sleep(0.5)
             st.rerun()
     with colB:
         if st.button("تنزيل كل الملفات (ZIP)"):
@@ -2033,6 +2156,10 @@ def admin_lists_ui():
                     conn.execute("UPDATE services SET active=? WHERE id=?", (new_status, service['id']))
                     conn.commit()
                 st.success("تم تغيير الحالة")
+                # مسح الذاكرة المؤقتة
+                if hasattr(st, 'cache_data'):
+                    st.cache_data.clear()
+                time.sleep(0.5)
                 st.rerun()
 
     with st.form("add_service"):
@@ -2048,6 +2175,9 @@ def admin_lists_ui():
                 st.rerun()
             except sqlite3.IntegrityError:
                 st.error("الخدمة موجودة مسبقًا")
+        # مسح الذاكرة المؤقتة عند إضافة خدمة جديدة
+        if hasattr(st, 'cache_data'):
+            st.cache_data.clear()
 
     st.markdown("#### 🏥 أنواع المستشفيات")
     types = get_hospital_types()
@@ -2057,6 +2187,8 @@ def admin_lists_ui():
         if new_types:
             set_hospital_types(new_types)
             st.success("تم الحفظ")
+            time.sleep(0.5)
+            st.rerun()
 
     st.markdown("#### 🏢 القطاعات")
     sectors = get_sectors()
@@ -2066,6 +2198,8 @@ def admin_lists_ui():
         if new_sectors:
             set_sectors(new_sectors)
             st.success("تم الحفظ")
+            time.sleep(0.5)
+            st.rerun()
 
     st.markdown("#### 🗺️ المحافظات")
     gov = get_governorates()
@@ -2075,6 +2209,8 @@ def admin_lists_ui():
         if new_gov:
             set_governorates(new_gov)
             st.success("تم الحفظ")
+            time.sleep(0.5)
+            st.rerun()
 
     st.markdown("#### 📋 حالات الطلبات (للأدمن فقط)")
     current_statuses = get_request_statuses()
@@ -2102,6 +2238,10 @@ def admin_lists_ui():
                          """, (new_status_name, 1 if prevents_new else 0, blocks_days, 1 if is_final else 0))
                          conn.commit()
                      st.success(f"تمت إضافة أو تعديل الحالة: {new_status_name}")
+                     # مسح الذاكرة المؤقتة وإعادة تحميل الصفحة
+                     if hasattr(st, 'cache_data'):
+                         st.cache_data.clear()
+                     time.sleep(0.5)
                      st.rerun()
                  except Exception as e:
                      st.error(f"خطأ: {e}")
@@ -2122,6 +2262,10 @@ def admin_lists_ui():
                              conn.execute("DELETE FROM request_statuses WHERE name = ?", (status_to_delete,))
                              conn.commit()
                              st.success(f"تم حذف الحالة: {status_to_delete}")
+                             # مسح الذاكرة المؤقتة
+                             if hasattr(st, 'cache_data'):
+                                 st.cache_data.clear()
+                             time.sleep(0.5)
                              st.rerun()
                  except Exception as e:
                      st.error(f"خطأ: {e}")
@@ -2146,7 +2290,8 @@ def admin_lists_ui():
                     
                     conn.commit()
                 st.success("تم حفظ التعديل وتطبيقه على جميع الطلبات")
-                st.cache_data.clear()  # مسح الكاش
+                # إعادة تحميل الصفحة
+                time.sleep(0.5)
                 st.rerun()
 
     with st.form("add_doc_type"):
@@ -2173,7 +2318,8 @@ def admin_lists_ui():
                         
                         conn.commit()
                     st.success("تمت إضافة نوع المستند وتطبيقه على الطلبات الموجودة")
-                    st.cache_data.clear()  # مسح الكاش
+                    # إعادة تحميل الصفحة لعرض التغييرات
+                    time.sleep(0.5)
                     st.rerun()
                 except sqlite3.IntegrityError:
                     st.error("الاسم الداخلي موجود مسبقًا")
@@ -2216,7 +2362,8 @@ def admin_lists_ui():
                             conn.commit()
                         
                         st.success(f"✅ تم حفظ المستندات الاختيارية لـ {htype} وتطبيقها على الطلبات الموجودة")
-                        st.cache_data.clear()  # مسح الكاش
+                        # إعادة تحميل الصفحة لعرض التغييرات
+                        time.sleep(0.5)  # انتظار قصير لضمان حفظ البيانات
                         st.rerun() 
                     except Exception as e:
                         st.error(f"❌ حدث خطأ أثناء الحفظ: {e}")
@@ -2389,10 +2536,12 @@ def main():
         st.markdown(f"<div style='text-align: center;'><img src='data:image/png;base64,{encoded_string}' class='banner-image'></div>", unsafe_allow_html=True)
 
 
-    # تهيئة قاعدة البيانات إذا لزم الأمر
+    # تهيئة قاعدة البيانات وتشغيل migrations
     if 'db_setup_done' not in st.session_state:
         try:
             run_ddl()
+            run_migrations()
+            start_database_monitor()
             st.session_state.db_setup_done = True
         except Exception as e:
             st.error(f"❌ خطأ في تهيئة النظام: {e}")
