@@ -1136,21 +1136,26 @@ def documents_upload_ui(request_id: int, user: dict, is_active_edit: bool = Fals
             uploaded = st.file_uploader("رفع ملف", type=allowed_types, key=f"up_{doc['id']}")
 
             if uploaded is not None:
+                file_valid = False
                 if video_only:
-                    if not check_file_type(uploaded.name, True): # يجب أن يكون فيديو
+                    if check_file_type(uploaded.name, True):
+                        file_valid = True
+                    else:
                         st.error("الرجاء رفع ملف فيديو فقط (MP4, AVI, MOV, WMV, FLV, WEBM)")
-                    else:
-                        save_uploaded_file(uploaded, user, request_id, doc)
                 elif is_video_allowed_flag:
-                    if not check_file_type(uploaded.name, True): # يمكن أن يكون PDF أو فيديو
+                    if check_file_type(uploaded.name, True):
+                        file_valid = True
+                    else:
                         st.error(f"الرجاء رفع ملف بصيغة {' أو '.join(allowed_types).upper()}")
-                    else:
-                        save_uploaded_file(uploaded, user, request_id, doc)
                 else:
-                    if not uploaded.name.lower().endswith('.pdf'): # يجب أن يكون PDF فقط
-                        st.error("الرجاء رفع ملف PDF فقط")
+                    if uploaded.name.lower().endswith('.pdf'):
+                        file_valid = True
                     else:
-                        save_uploaded_file(uploaded, user, request_id, doc)
+                        st.error("الرجاء رفع ملف PDF فقط")
+                
+                if file_valid:
+                    if save_uploaded_file(uploaded, user, request_id, doc):
+                        st.rerun()
 
         with cols[2]:
             render_file_downloader(doc, key_prefix=f"doc_upload_{doc['id']}")
@@ -1164,9 +1169,6 @@ def documents_upload_ui(request_id: int, user: dict, is_active_edit: bool = Fals
                     with get_conn() as conn:
                         conn.execute("UPDATE documents SET file_name=NULL, file_path=NULL, satisfied=0 WHERE id=?", (doc["id"],))
                         conn.commit()
-                    # مسح الذاكرة المؤقتة
-                    if hasattr(st, 'cache_data'):
-                        st.cache_data.clear()
                     st.rerun()
         with cols[4]:
             st.write("✅ مستوفى" if doc["satisfied"] else "❌ غير مستوفى")
@@ -1186,10 +1188,6 @@ def documents_upload_ui(request_id: int, user: dict, is_active_edit: bool = Fals
                 st.session_state.pop("active_request_id", None)
                 if f"editing_request_{request_id}" in st.session_state:
                     st.session_state.pop(f"editing_request_{request_id}", None)
-                # مسح الذاكرة المؤقتة لضمان تحديث البيانات
-                if hasattr(st, 'cache_data'):
-                    st.cache_data.clear()
-                time.sleep(0.5)
                 st.rerun()
         elif not all_required_uploaded:
             st.info("يرجى رفع جميع المستندات المطلوبة لتفعيل زر 'حفظ الطلب'.")
@@ -1199,23 +1197,23 @@ def documents_upload_ui(request_id: int, user: dict, is_active_edit: bool = Fals
 def save_uploaded_file(file, user: dict, request_id: int, doc_row):
     """حفظ ملف مرفوع من قبل المستخدم"""
     if file is None:
-        return
+        return False
     
     try:
-        hospital_name = user["name"]
-        dest_dir = STORAGE_DIR / safe_filename(hospital_name)[:50] / str(request_id)
+        # إنشاء المجلد
+        dest_dir = STORAGE_DIR / safe_filename(user["name"])[:50] / str(request_id)
         dest_dir.mkdir(parents=True, exist_ok=True)
         
-        # إنشاء اسم ملف آمن
+        # إنشاء اسم الملف
         file_ext = Path(file.name).suffix.lower()
         fn = f"{safe_filename(doc_row['doc_type'])[:50]}{file_ext}"
         dest_path = dest_dir / fn
 
-        # حفظ الملف
+        # حفظ الملف مباشرة
         with open(dest_path, "wb") as f:
             f.write(file.getbuffer())
             
-        # تحديث قاعدة البيانات
+        # تحديث قاعدة البيانات في معاملة واحدة
         now_iso = datetime.now().isoformat()
         with get_conn() as conn:
             conn.execute(
@@ -1225,14 +1223,11 @@ def save_uploaded_file(file, user: dict, request_id: int, doc_row):
             conn.execute("UPDATE requests SET updated_at=? WHERE id=?", (now_iso, request_id))
             conn.commit()
         
-        # مسح الذاكرة المؤقتة لضمان تحديث البيانات
-        if hasattr(st, 'cache_data'):
-            st.cache_data.clear()
-        
+        st.success("✅ تم رفع الملف بنجاح")
         return True
         
     except Exception as e:
-        st.error(f"❌ حدث خطأ أثناء حفظ الملف: {e}")
+        st.error(f"❌ خطأ في رفع الملف: {e}")
         return False
 
 def render_file_downloader(doc: sqlite3.Row, key_prefix: str = "dl"):
