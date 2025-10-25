@@ -2607,4 +2607,4 @@ if __name__ == "__main__":
         """)
         # لإظهار الخطأ الفعلي في الطرفية أثناء التطوير
         import traceback
-        traceback.print_exc(
+        traceback.print_exc()
