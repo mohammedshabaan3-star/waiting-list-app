@@ -1133,15 +1133,9 @@ def documents_upload_ui(request_id: int, user: dict, is_active_edit: bool = Fals
                 allowed_types = ['pdf']
                 st.caption("أنواع الملفات المسموحة: PDF فقط")
 
-            # تحقق من وجود ملف مرفوع مسبقاً
-            upload_key = f"up_{doc['id']}"
-            if upload_key not in st.session_state:
-                st.session_state[upload_key] = None
-                
-            uploaded = st.file_uploader("رفع ملف", type=allowed_types, key=upload_key)
+            uploaded = st.file_uploader("رفع ملف", type=allowed_types, key=f"up_{doc['id']}")
 
-            # معالجة الملف فقط إذا كان جديداً
-            if uploaded is not None and uploaded != st.session_state.get(f"{upload_key}_processed"):
+            if uploaded is not None:
                 file_valid = False
                 if video_only:
                     if check_file_type(uploaded.name, True):
@@ -1160,10 +1154,9 @@ def documents_upload_ui(request_id: int, user: dict, is_active_edit: bool = Fals
                         st.error("الرجاء رفع ملف PDF فقط")
                 
                 if file_valid:
-                    if save_uploaded_file(uploaded, user, request_id, doc):
-                        st.session_state[f"{upload_key}_processed"] = uploaded
-                        st.success("✅ تم رفع الملف بنجاح")
-                        st.rerun()
+                    save_uploaded_file(uploaded, user, request_id, doc)
+                    st.success("✅ تم رفع الملف بنجاح")
+                    st.rerun()
 
         with cols[2]:
             render_file_downloader(doc, key_prefix=f"doc_upload_{doc['id']}")
