@@ -2398,7 +2398,6 @@ def admin_users_ui():
                     conn.execute("INSERT INTO admins (username, password_hash, role) VALUES (?,?,?)", (u, hash_pw(p), role))
                     conn.commit()
                 st.success("تمت الإضافة")
-                st.rerun()
             except sqlite3.IntegrityError:
                 st.error("اسم المستخدم موجود مسبقًا")
     
@@ -2473,7 +2472,6 @@ def admin_resources_ui():
                 with open(filepath, "wb") as f:
                     f.write(uploaded_file.getbuffer())
                 st.success("تم رفع الملف بنجاح")
-                st.rerun()
 
 # ---------------------------- وظائف عامة ---------------------------- #
 def change_password_ui(user_id: int, user_table: str):
@@ -2558,7 +2556,6 @@ def main():
         else:
             st.error("❌ دور المستخدم غير معروف")
             st.session_state.pop("user", None)
-            st.rerun()
     
     # تذييل الصفحة البسيط والأنيق
     st.markdown("""
