@@ -1154,9 +1154,8 @@ def documents_upload_ui(request_id: int, user: dict, is_active_edit: bool = Fals
                         st.error("الرجاء رفع ملف PDF فقط")
                 
                 if file_valid:
-                    save_uploaded_file(uploaded, user, request_id, doc)
-                    st.success("✅ تم رفع الملف بنجاح")
-                    st.rerun()
+                    if save_uploaded_file(uploaded, user, request_id, doc):
+                        st.success("✅ تم رفع الملف بنجاح")
 
         with cols[2]:
             render_file_downloader(doc, key_prefix=f"doc_upload_{doc['id']}")
@@ -1170,7 +1169,7 @@ def documents_upload_ui(request_id: int, user: dict, is_active_edit: bool = Fals
                     with get_conn() as conn:
                         conn.execute("UPDATE documents SET file_name=NULL, file_path=NULL, satisfied=0 WHERE id=?", (doc["id"],))
                         conn.commit()
-                    st.rerun()
+                    st.success("✅ تم حذف الملف")
         with cols[4]:
             st.write("✅ مستوفى" if doc["satisfied"] else "❌ غير مستوفى")
             
@@ -1189,7 +1188,6 @@ def documents_upload_ui(request_id: int, user: dict, is_active_edit: bool = Fals
                 st.session_state.pop("active_request_id", None)
                 if f"editing_request_{request_id}" in st.session_state:
                     st.session_state.pop(f"editing_request_{request_id}", None)
-                st.rerun()
         elif not all_required_uploaded:
             st.info("يرجى رفع جميع المستندات المطلوبة لتفعيل زر 'حفظ الطلب'.")
 
@@ -1244,13 +1242,11 @@ def render_file_downloader(doc: sqlite3.Row, key_prefix: str = "dl"):
                 with get_conn() as conn:
                     conn.execute("UPDATE documents SET file_name=NULL, file_path=NULL, satisfied=0 WHERE id=?", (doc["id"],))
                     conn.commit()
-                st.rerun()
         except Exception as e:
             st.error(f"❌ خطأ في الوصول للملف: {e}")
             with get_conn() as conn:
                 conn.execute("UPDATE documents SET file_name=NULL, file_path=NULL, satisfied=0 WHERE id=?", (doc["id"],))
                 conn.commit()
-            st.rerun()
     else:
         st.caption("— لم يتم الرفع")
 
@@ -1344,15 +1340,10 @@ def request_details_ui(request_id: int, role: str = "hospital"):
                 st.session_state.pop("active_request_id", None)
                 if f"editing_request_{request_id}" in st.session_state:
                     st.session_state.pop(f"editing_request_{request_id}", None)
-                # مسح الذاكرة المؤقتة
-                if hasattr(st, 'cache_data'):
-                    st.cache_data.clear()
-                st.rerun()
 
     if can_edit and role == "hospital":
         if st.button("✏️ تعديل الطلب"):
             st.session_state[f"editing_request_{request_id}"] = True
-            st.rerun()
 
     is_editing = st.session_state.get(f"editing_request_{request_id}", False)
     if is_editing:
