@@ -728,16 +728,11 @@ def hospital_blocked_from_request(hospital_id: int, service_id: int, blocked_sta
 
 def is_hospital_profile_complete(hospital_id: int) -> bool:
     with get_conn() as conn:
-        row = conn.execute("SELECT license_start, license_end, license_number, manager_name, manager_phone, address, type FROM hospitals WHERE id=?", (hospital_id,)).fetchone()
+        row = conn.execute("SELECT manager_name, manager_phone, address FROM hospitals WHERE id=?", (hospital_id,)).fetchone()
         if not row: return False
         
-        # للمستشفيات الحكومية: لا نتطلب تواريخ الترخيص
-        if row['type'] == 'حكومي':
-            required_fields = [row['manager_name'], row['manager_phone'], row['address']]
-        else:
-            # للمستشفيات الخاصة: نتطلب جميع الحقول
-            required_fields = [row['license_start'], row['license_number'], row['manager_name'], row['manager_phone'], row['address']]
-            # تاريخ النهاية اختياري (يمكن أن يكون "غير محدد")
+        # الحقول الإلزامية فقط: مدير المستشفى، هاتف المدير، العنوان
+        required_fields = [row['manager_name'], row['manager_phone'], row['address']]
         
         return all(field and str(field).strip() for field in required_fields)
 
@@ -1045,8 +1040,8 @@ def hospital_dashboard_ui(user: dict):
 
 def hospital_new_request_ui(user: dict):
     """واجهة تقديم طلب تعاقد جديد للمستشفى مع إعادة التحميل الصحيحة."""
-    if not is_hospital_profile_complete(user["id"]):  # تغيير hospital_id إلى id
-        st.warning("⚠️ يجب إكمال بيانات المستشفى الأساسية أولاً (بداية الترخيص، نهاية الترخيص، رقم الترخيص، مدير المستشفى، هاتف المدير، عنوان المستشفى)")
+    if not is_hospital_profile_complete(user["id"]):
+        st.warning("⚠️ يجب إكمال بيانات المستشفى الأساسية أولاً (مدير المستشفى، هاتف المدير، عنوان المستشفى)")
         hospital_dashboard_ui(user)
         return
 
