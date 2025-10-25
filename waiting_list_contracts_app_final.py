@@ -668,25 +668,19 @@ def hospital_blocked_from_request(hospital_id: int, service_id: int, blocked_sta
         return False
 
 def is_hospital_profile_complete(hospital_id: int) -> bool:
-    """التحقق من اكتمال ملف المستشفى"""
+    """التحقق من اكتمال ملف المستشفى - تواريخ الترخيص اختيارية لجميع الأنواع"""
     try:
         with get_conn() as conn:
             row = conn.execute(
-                "SELECT license_start, license_end, license_number, manager_name, "
-                "manager_phone, address, type FROM hospitals WHERE id=?",
+                "SELECT manager_name, manager_phone, address FROM hospitals WHERE id=?",
                 (hospital_id,)
             ).fetchone()
             
             if not row:
                 return False
             
-            if row['type'] == 'حكومي':
-                required_fields = [row['manager_name'], row['manager_phone'], row['address']]
-            else:
-                required_fields = [
-                    row['license_start'], row['license_number'],
-                    row['manager_name'], row['manager_phone'], row['address']
-                ]
+            # الحقول المطلوبة لجميع أنواع المستشفيات (تواريخ الترخيص اختيارية)
+            required_fields = [row['manager_name'], row['manager_phone'], row['address']]
             
             return all(field and str(field).strip() for field in required_fields)
     except Exception as e:
@@ -874,9 +868,11 @@ def run_ddl() -> None:
             
             # إدراج البيانات الأولية
             if cur.execute("SELECT COUNT(1) FROM admins").fetchone()[0] == 0:
+                # استخدام متغير بيئة أو قيمة افتراضية آمنة
+                admin_password = os.getenv('ADMIN_PASSWORD', 'admin123')
                 cur.execute(
                     "INSERT INTO admins (username, password_hash, role) VALUES (?,?,?)",
-                    ("admin", secure_hash("admin123"), "admin")
+                    ("admin", secure_hash(admin_password), "admin")
                 )
             
             if cur.execute("SELECT COUNT(1) FROM services").fetchone()[0] == 0:
@@ -1059,15 +1055,13 @@ def hospital_dashboard_ui(user: Dict[str, Any]) -> None:
             st.error("لم يتم العثور على بيانات المستشفى")
             return
         
-        # checkbox خارج الـ form للمستشفيات الخاصة
-        no_end_date = False
-        if hospital['type'] != 'حكومي':
-            current_no_end = hospital['license_end'] == "غير محدد" or not hospital['license_end']
-            no_end_date = st.checkbox(
-                "ترخيص دائم (بدون تاريخ انتهاء)",
-                value=current_no_end,
-                key="no_end_date_checkbox"
-            )
+        # checkbox خارج الـ form لجميع أنواع المستشفيات
+        current_no_end = hospital['license_end'] == "غير محدد" or not hospital['license_end']
+        no_end_date = st.checkbox(
+            "ترخيص دائم أو بدون تاريخ انتهاء (اختياري)",
+            value=current_no_end,
+            key="no_end_date_checkbox"
+        )
         
         with st.form("edit_hospital_profile"):
             st.info("يمكنك تحديث بيانات التواصل والترخيص من هنا. لتغيير البيانات الأساسية، يرجى التواصل مع الإدارة.")
@@ -1085,36 +1079,35 @@ def hospital_dashboard_ui(user: Dict[str, Any]) -> None:
             
             col3, col4 = st.columns(2)
             with col3:
-                if hospital['type'] != 'حكومي':
-                    license_start = st.date_input(
-                        "بداية الترخيص",
-                        value=parse_date_safely(hospital['license_start']),
-                        min_value=date(1900, 1, 1),
-                        max_value=date(2100, 12, 31)
-                    )
-                    license_number = st.text_input("رقم الترخيص", value=hospital['license_number'] or "")
-                else:
-                    license_start = None
-                    license_number = st.text_input("رقم الترخيص (اختياري)", value=hospital['license_number'] or "")
-                
-                manager_name = st.text_input("مدير المستشفى", value=hospital['manager_name'] or "")
+                # تواريخ الترخيص اختيارية لجميع أنواع المستشفيات
+                license_start = st.date_input(
+                    "بداية الترخيص (اختياري)",
+                    value=parse_date_safely(hospital['license_start']),
+                    min_value=date(1900, 1, 1),
+                    max_value=date(2100, 12, 31),
+                    help="اختياري لجميع أنواع المستشفيات"
+                )
+                license_number = st.text_input(
+                    "رقم الترخيص (اختياري)", 
+                    value=hospital['license_number'] or "",
+                    help="اختياري لجميع أنواع المستشفيات"
+                )
+                manager_name = st.text_input("مدير المستشفى *", value=hospital['manager_name'] or "")
             
             with col4:
-                if hospital['type'] != 'حكومي':
-                    if not no_end_date:
-                        license_end = st.date_input(
-                            "تاريخ انتهاء الترخيص",
-                            value=parse_date_safely(hospital['license_end'], date.today()),
-                            min_value=date(1900, 1, 1),
-                            max_value=date(2100, 12, 31)
-                        )
-                    else:
-                        license_end = "غير محدد"
+                if not no_end_date:
+                    license_end = st.date_input(
+                        "تاريخ انتهاء الترخيص (اختياري)",
+                        value=parse_date_safely(hospital['license_end'], date.today()),
+                        min_value=date(1900, 1, 1),
+                        max_value=date(2100, 12, 31),
+                        help="اختياري لجميع أنواع المستشفيات"
+                    )
                 else:
-                    license_end = None
+                    license_end = "غير محدد"
                 
-                manager_phone = st.text_input("هاتف المدير", value=hospital['manager_phone'] or "")
-                address = st.text_area("عنوان المستشفى", value=hospital['address'] or "", height=100)
+                manager_phone = st.text_input("هاتف المدير *", value=hospital['manager_phone'] or "")
+                address = st.text_area("عنوان المستشفى *", value=hospital['address'] or "", height=100)
             
             st.markdown("---")
             st.markdown("**معلومات الفروع (اختياري)**")
@@ -1136,19 +1129,22 @@ def hospital_dashboard_ui(user: Dict[str, Any]) -> None:
             if st.form_submit_button("حفظ البيانات"):
                 try:
                     with get_conn() as conn:
-                        license_end_value = None
-                        if hospital['type'] != 'حكومي':
-                            if license_end == "غير محدد":
-                                license_end_value = "غير محدد"
-                            elif license_end:
-                                license_end_value = str(license_end)
+                        # تحضير قيم التراخيص (اختيارية لجميع الأنواع)
+                        license_start_value = str(license_start) if license_start else None
+                        
+                        if license_end == "غير محدد":
+                            license_end_value = "غير محدد"
+                        elif license_end:
+                            license_end_value = str(license_end)
+                        else:
+                            license_end_value = None
                         
                         conn.execute("""
                             UPDATE hospitals SET address=?, license_start=?, license_end=?, 
                             manager_name=?, manager_phone=?, license_number=?, other_branches=?, other_branches_address=? 
                             WHERE id=?
                         """, (
-                            address, str(license_start) if license_start else None, license_end_value,
+                            address, license_start_value, license_end_value,
                             manager_name, manager_phone, license_number, other_branches, other_branches_address,
                             user["id"]
                         ))
@@ -1714,7 +1710,8 @@ def admin_hospitals_ui() -> None:
                 df["نوع المستشفى"] = "خاص"
             
             df["username"] = df["اسم المستشفى"].apply(lambda name: generate_username(name) or "hospital")
-            df["password"] = "1234"
+            # استخدام كلمة مرور عشوائية آمنة
+            df["password"] = df.apply(lambda x: secrets.token_urlsafe(8), axis=1)
             
             added, skipped = 0, 0
             with get_conn() as conn:
@@ -1781,7 +1778,7 @@ def admin_hospitals_ui() -> None:
             code = st.text_input("كود المستشفى", max_chars=20)
             htype = st.text_input("نوع المستشفى", max_chars=20)
             username = st.text_input("اسم المستخدم (سيتم توليد تلقائيًا إن فارغ)", max_chars=50)
-            password = st.text_input("كلمة المرور", type="password", value="1234", max_chars=100)
+            password = st.text_input("كلمة المرور", type="password", value=secrets.token_urlsafe(8), max_chars=100)
             
             if st.form_submit_button("إضافة"):
                 if not all([name, sector, gov, code, password]):
@@ -2829,7 +2826,7 @@ def admin_users_ui() -> None:
             if st.button("إعادة تعيين كلمة المرور", key=f"reset_admin_{admin['id']}"):
                 try:
                     with get_conn() as conn:
-                        new_password = "1234"
+                        new_password = secrets.token_urlsafe(8)
                         conn.execute("UPDATE admins SET password_hash=? WHERE id=?", (secure_hash(new_password), admin['id']))
                         conn.commit()
                     st.success(f"تمت إعادة تعيين كلمة المرور إلى: {new_password}")
@@ -2877,7 +2874,7 @@ def admin_users_ui() -> None:
             if hospitals:
                 hospital_options = [f"{h['id']} - {h['name']} ({h['username']})" for h in hospitals]
                 selected_hospital = st.selectbox("اختر المستشفى", hospital_options)
-                new_password = st.text_input("كلمة المرور الجديدة", type="password", value="1234", max_chars=100)
+                new_password = st.text_input("كلمة المرور الجديدة", type="password", value=secrets.token_urlsafe(8), max_chars=100)
                 
                 if st.form_submit_button("إعادة تعيين"):
                     if selected_hospital and new_password:
