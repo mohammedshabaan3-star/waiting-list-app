@@ -1133,9 +1133,15 @@ def documents_upload_ui(request_id: int, user: dict, is_active_edit: bool = Fals
                 allowed_types = ['pdf']
                 st.caption("أنواع الملفات المسموحة: PDF فقط")
 
-            uploaded = st.file_uploader("رفع ملف", type=allowed_types, key=f"up_{doc['id']}")
+            # تحقق من وجود ملف مرفوع مسبقاً
+            upload_key = f"up_{doc['id']}"
+            if upload_key not in st.session_state:
+                st.session_state[upload_key] = None
+                
+            uploaded = st.file_uploader("رفع ملف", type=allowed_types, key=upload_key)
 
-            if uploaded is not None:
+            # معالجة الملف فقط إذا كان جديداً
+            if uploaded is not None and uploaded != st.session_state.get(f"{upload_key}_processed"):
                 file_valid = False
                 if video_only:
                     if check_file_type(uploaded.name, True):
@@ -1155,6 +1161,8 @@ def documents_upload_ui(request_id: int, user: dict, is_active_edit: bool = Fals
                 
                 if file_valid:
                     if save_uploaded_file(uploaded, user, request_id, doc):
+                        st.session_state[f"{upload_key}_processed"] = uploaded
+                        st.success("✅ تم رفع الملف بنجاح")
                         st.rerun()
 
         with cols[2]:
@@ -1223,7 +1231,6 @@ def save_uploaded_file(file, user: dict, request_id: int, doc_row):
             conn.execute("UPDATE requests SET updated_at=? WHERE id=?", (now_iso, request_id))
             conn.commit()
         
-        st.success("✅ تم رفع الملف بنجاح")
         return True
         
     except Exception as e:
