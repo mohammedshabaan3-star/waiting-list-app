@@ -3124,18 +3124,4 @@ def main():
     """, unsafe_allow_html=True)
 
 if __name__ == "__main__":
-    try:
-        main()
-    except Exception as e:
-        st.error("""
-        **❌ حدث خطأ غير متوقع في النظام**
-        
-        يرجى:
-        1. تحديث الصفحة
-        2. التأكد من اتصال الإنترنت
-        3. التواصل مع الدعم الفني إذا استمرت المشكلة
-        """)
-        # لإظهار الخطأ الفعلي في الطرفية أثناء التطوير
-        import traceback
-        traceback.print_exc()
-
+    main()
