@@ -1,0 +1,14 @@
+[server]
+maxUploadSize = 200
+enableCORS = false
+enableXsrfProtection = false
+baseUrlPath = ""
+headless = false
+runOnSave = false
+allowRunOnSave = false
+
+[browser]
+gatherUsageStats = false
+
+[theme]
+base = "light"
