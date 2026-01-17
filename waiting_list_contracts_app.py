@@ -128,7 +128,26 @@ for p in [DB_PATH.parent, STORAGE_DIR, EXPORTS_DIR, RESOURCES_DIR, BACKUP_DIR]:
     p.mkdir(parents=True, exist_ok=True)
 
 # ---------------------------- أنماط CSS مخصصة - محسّنة للقراءة (UI/UX Enhanced) ---------------------- #
-st.markdown("""
+# لوحة الألوان الموحدة للتطبيق
+COLOR_PALETTE = {
+    'primary': '#1e40af',           # لون أساسي - أزرق
+    'primary_dark': '#1a3a8a',      # نسخة داكنة من الأساسي
+    'primary_light': '#dbeafe',     # نسخة فاتحة من الأساسي
+    'secondary': '#64748b',         # لون ثانوي - رمادي
+    'success': '#10b981',           # نجاح - أخضر
+    'success_light': '#d1fae5',     # نجاح فاتح
+    'warning': '#f59e0b',           # تحذير - برتقالي
+    'warning_light': '#fef3c7',     # تحذير فاتح
+    'error': '#ef4444',             # خطأ - أحمر
+    'error_light': '#fee2e2',       # خطأ فاتح
+    'background': '#f8f9fa',        # خلفية - فاتح جداً
+    'text': '#1f2937',              # نص - داكن
+    'text_light': '#6b7280',        # نص فاتح
+    'border': '#cbd5e1',            # حدود
+    'white': '#ffffff',             # أبيض
+}
+
+st.markdown(f"""
 <style>
     /* تحميل Material Icons صراحة - النظام الأساسي */
     @import url('https://fonts.googleapis.com/icon?family=Material+Icons');
@@ -147,9 +166,9 @@ st.markdown("""
     .main h6, 
     .main label, 
     .main a, 
-    .main li {
+    .main li {{
         font-family: 'Cairo', 'IBM Plex Sans Arabic', sans-serif;
-    }
+    }}
     
     /* تطبيق الخط العربي على عناصر الإدخال فقط */
     .stTextInput input, 
@@ -157,16 +176,16 @@ st.markdown("""
     .stSelectbox select, 
     .stTextArea textarea, 
     .stDateInput input, 
-    .stTimeInput input {
+    .stTimeInput input {{
         font-family: 'Cairo', 'IBM Plex Sans Arabic', sans-serif !important;
-    }
+    }}
     
     /* تطبيق الخط العربي على الأزرار فقط */
     .stButton button, 
     .stDownloadButton button, 
-    .stForm button {
+    .stForm button {{
         font-family: 'Cairo', 'IBM Plex Sans Arabic', sans-serif !important;
-    }
+    }}
     
     /* === الصفحة الرئيسية === */
     .main {
