@@ -169,312 +169,398 @@ def verify_password(password: str, stored_hash: str) -> bool:
 for p in [DB_PATH.parent, STORAGE_DIR, EXPORTS_DIR, RESOURCES_DIR, BACKUP_DIR]:
     p.mkdir(parents=True, exist_ok=True)
 
-# ---------------------------- أنماط CSS مخصصة ---------------------------- #
+# ---------------------------- أنماط CSS مخصصة - محسّنة للقراءة (UI/UX Enhanced) ---------------------- #
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap');
+    /* استيراد الخط العربي الاحترافي الموحد */
+    @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap');
     
-    /* توسيع العرض الأقصى للصفحة الرئيسية */
-    .main {
-        background-color: #f8f9fa;
-        color: #333;
-        direction: rtl;
-        font-family: 'Cairo', sans-serif;
-        max-width: 100vw; 
-        padding-left: 2rem;
-        padding-right: 2rem;
-        margin: 0 auto;
+    /* === الإعدادات العامة === */
+    * {
+        font-family: 'Cairo', 'IBM Plex Sans Arabic', sans-serif !important;
     }
     
+    html, body {
+        direction: rtl;
+        text-align: right;
+        font-family: 'Cairo', 'IBM Plex Sans Arabic', sans-serif;
+    }
+    
+    /* === الصفحة الرئيسية === */
+    .main {
+        background-color: #f8f9fa;
+        color: #1f2937;
+        direction: rtl;
+        font-family: 'Cairo', 'IBM Plex Sans Arabic', sans-serif;
+        max-width: 100%;
+        padding: 2rem;
+        margin: 0;
+        line-height: 1.8;
+    }
+    
+    /* === العناوين - التسلسل البصري الموحد === */
+    h1 {
+        color: #0f172a;
+        font-weight: 700;
+        font-size: 2rem;
+        margin-bottom: 1.5rem;
+        margin-top: 0;
+        line-height: 1.3;
+    }
+    
+    h2 {
+        color: #1e40af;
+        font-weight: 700;
+        font-size: 1.5rem;
+        margin-bottom: 1rem;
+        margin-top: 1.5rem;
+    }
+    
+    h3 {
+        color: #1e40af;
+        font-weight: 600;
+        font-size: 1.25rem;
+        margin-bottom: 0.75rem;
+    }
+    
+    h4, h5, h6 {
+        color: #374151;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+    }
+    
+    p {
+        font-size: 1rem;
+        line-height: 1.7;
+        color: #1f2937;
+    }
+    
+    /* === النماذج (Forms) - تحسين UX === */
+    .stForm {
+        border: 1px solid #cbd5e1;
+        border-radius: 12px;
+        padding: 1.5rem;
+        background-color: white;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        max-width: 100%;
+    }
+    
+    /* === حقول الإدخال === */
+    .stTextInput > div > div > input,
+    .stNumberInput > div > div > input,
+    .stSelectbox > div > div > select,
+    .stTextArea > div > div > textarea,
+    .stDateInput > div > div > input,
+    .stTimeInput > div > div > input {
+        border: 1.5px solid #cbd5e1;
+        border-radius: 8px;
+        padding: 0.75rem;
+        font-family: 'Cairo', 'IBM Plex Sans Arabic', sans-serif;
+        font-size: 1rem;
+        line-height: 1.5;
+        transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        background-color: white;
+        color: #1f2937;
+    }
+    
+    .stTextInput > div > div > input::placeholder,
+    .stTextArea > div > div > textarea::placeholder {
+        color: #9ca3af;
+    }
+    
+    .stTextInput > div > div > input:focus,
+    .stNumberInput > div > div > input:focus,
+    .stSelectbox > div > div > select:focus,
+    .stTextArea > div > div > textarea:focus,
+    .stDateInput > div > div > input:focus,
+    .stTimeInput > div > div > input:focus {
+        border-color: #1e40af;
+        box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.15);
+        outline: none;
+    }
+    
+    /* === التسميات (Labels) === */
+    .stTextInput label,
+    .stNumberInput label,
+    .stSelectbox label,
+    .stTextArea label,
+    .stDateInput label,
+    .stTimeInput label,
+    .stCheckbox label,
+    .stRadio label {
+        font-weight: 600;
+        color: #374151;
+        margin-bottom: 0.5rem;
+        font-size: 0.95rem;
+    }
+    
+    /* === الأزرار === */
+    .stButton > button,
+    .stDownloadButton > button,
+    .stForm button {
+        font-family: 'Cairo', 'IBM Plex Sans Arabic', sans-serif;
+        font-weight: 600;
+        font-size: 1rem;
+        border: none;
+        border-radius: 8px;
+        padding: 0.75rem 1.5rem;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+    
+    .stButton > button {
+        background-color: #1e40af;
+        color: white;
+    }
+    
+    .stButton > button:hover {
+        background-color: #1a3a8a;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(30, 64, 175, 0.3);
+    }
+    
+    .stDownloadButton > button {
+        background-color: #10b981;
+        color: white;
+        width: 100%;
+    }
+    
+    .stDownloadButton > button:hover {
+        background-color: #059669;
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    }
+    
+    /* === التبويبات === */
+    .stTabs [data-baseweb="tab"] {
+        height: 50px;
+        font-size: 1rem;
+        font-weight: 600;
+        font-family: 'Cairo', 'IBM Plex Sans Arabic', sans-serif;
+        padding: 12px 20px;
+    }
+    
+    /* === الجداول - CRITICAL === */
     .stDataFrame {
         width: 100% !important;
     }
     
+    .stDataFrame > div {
+        width: 100% !important;
+    }
+    
     .stDataFrame table {
-        color: #000 !important;
-        font-weight: bold !important;
+        width: 100% !important;
+        border-collapse: collapse;
+        font-family: 'Cairo', 'IBM Plex Sans Arabic', sans-serif;
     }
     
     .stDataFrame th {
         background-color: #1e40af !important;
         color: white !important;
-        font-weight: 600;
-        padding: 12px;
+        font-weight: 700 !important;
+        padding: 14px !important;
+        text-align: right !important;
+        border-bottom: 2px solid #1a3a8a !important;
+        font-size: 0.95rem;
+        line-height: 1.5;
     }
     
     .stDataFrame td {
-        padding: 10px;
-        border-bottom: 1px solid #e2e8f0;
-        color: #000 !important;
-        font-weight: bold !important;
-    }
-    .stForm {
-        border: 1px solid #e2e8f0;
-        border-radius: 12px;
-        padding: 20px;
-        background-color: white;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        max-width: 100%;
+        padding: 12px 14px !important;
+        border-bottom: 1px solid #e5e7eb !important;
+        color: #1f2937 !important;
+        font-weight: 500 !important;
+        text-align: right !important;
+        font-size: 0.95rem;
+        line-height: 1.6;
     }
     
-    .stButton>button {
-        background-color: #1a56db;
-        color: white;
-        border: none;
-        border-radius: 8px;
-        padding: 8px 16px;
-        font-weight: 600;
-        font-family: 'Cairo', sans-serif;
-        width: auto;
-        transition: all 0.3s ease;
+    .stDataFrame tr:hover {
+        background-color: #f3f4f6 !important;
     }
     
-    .stButton>button:hover {
-        background-color: #1e40af;
-        transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    .stDataFrame tr:nth-child(even) {
+        background-color: #f9fafb !important;
     }
     
-    .stTextInput>div>div>input,
-    .stSelectbox>div>div>select,
-    .stTextArea>div>div>textarea {
-        border: 1px solid #cbd5e1;
-        border-radius: 8px;
-        padding: 10px;
-        font-family: 'Cairo', sans-serif;
-        transition: border-color 0.3s ease;
+    /* === القوائم والقوائم المنسدلة === */
+    .stMultiSelect > div > div {
+        border-radius: 8px !important;
+        border: 1.5px solid #cbd5e1 !important;
     }
     
-    .stTextInput>div>div>input:focus,
-    .stSelectbox>div>div>select:focus,
-    .stTextArea>div>div>textarea:focus {
-        border-color: #1a56db;
-        box-shadow: 0 0 0 2px rgba(26, 86, 219, 0.2);
-    }
-    
-    .stTabs [data-baseweb="tab"] {
-        height: 50px;
-        font-size: 16px;
-        font-weight: 600;
-        font-family: 'Cairo', sans-serif;
-    }
-    
-    h1, h2, h3 {
-        color: #1e40af;
-        font-family: 'Cairo', sans-serif;
-        margin-bottom: 1rem;
-    }
-    
+    /* === المربعات (Boxes) === */
     .header {
         text-align: center;
-        color: #1e40af;
+        color: #0f172a;
         font-weight: 700;
-        margin-bottom: 30px;
-        font-family: 'Cairo', sans-serif;
-        padding: 20px;
+        margin-bottom: 2rem;
+        padding: 1.5rem;
         background: linear-gradient(135deg, #f0f4ff 0%, #e6eeff 100%);
         border-radius: 12px;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        box-shadow: 0 2px 8px rgba(30, 64, 175, 0.1);
+        font-size: 1.75rem;
+        line-height: 1.4;
     }
     
     .subheader {
         color: #1a56db;
-        font-weight: 600;
-        margin-top: 25px;
-        margin-bottom: 15px;
+        font-weight: 700;
+        margin-top: 1.5rem;
+        margin-bottom: 1rem;
         border-bottom: 3px solid #dbeafe;
-        padding-bottom: 10px;
-        font-family: 'Cairo', sans-serif;
+        padding-bottom: 0.75rem;
+        font-size: 1.25rem;
     }
     
     .info-box {
         background-color: #dbeafe;
-        padding: 20px;
-        border-radius: 12px;
-        border-left: 5px solid #1e40af;
-        margin: 15px 0;
-        font-family: 'Cairo', sans-serif;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        padding: 1.25rem;
+        border-radius: 10px;
+        border-right: 5px solid #1e40af;
+        margin: 1rem 0;
+        box-shadow: 0 2px 6px rgba(30, 64, 175, 0.1);
+        color: #1e40af;
+        font-weight: 500;
     }
     
-    .logo-container {
-        text-align: center;
-        margin-bottom: 20px;
-    }
-    
-    .logo-container img {
-        max-width: 180px;
-        height: auto;
-        border-radius: 8px;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    }
-    
-    .footer {
-        text-align: center;
-        margin-top: 40px;
-        padding: 25px;
-        border-top: 2px solid #e2e8f0;
-        color: #64748b;
-        font-size: 14px;
-        width: 100%;
-        background-color: #f8fafc;
-    }
-    
+    /* === المربع اللوحي (Stats Card) === */
     .stats-card {
         background-color: white;
-        border-radius: 16px;
-        padding: 25px;
-        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
-        margin-bottom: 25px;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        margin-bottom: 1.5rem;
         width: 100%;
-        transition: transform 0.3s ease;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        border: 1px solid #e5e7eb;
     }
     
     .stats-card:hover {
-        transform: translateY(-5px);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
     }
     
     .stats-header {
-        color: #1e40af;
+        color: #0f172a;
         font-weight: 700;
-        margin-bottom: 20px;
-        font-size: 20px;
+        margin-bottom: 1.5rem;
+        font-size: 1.25rem;
         text-align: center;
+        border-bottom: 2px solid #e5e7eb;
+        padding-bottom: 1rem;
     }
     
     .stats-item {
         display: flex;
         justify-content: space-between;
-        padding: 12px 0;
-        border-bottom: 1px solid #e2e8f0;
+        align-items: center;
+        padding: 1rem 0;
+        border-bottom: 1px solid #f3f4f6;
+        gap: 1rem;
     }
     
     .stats-label {
         font-weight: 600;
         color: #374151;
+        font-size: 0.95rem;
+        flex: 1;
     }
     
     .stats-value {
         font-weight: 700;
-        color: #1e40af;
-        background-color: #dbeafe;
-        padding: 4px 12px;
+        color: white;
+        background-color: #1e40af;
+        padding: 0.5rem 1rem;
         border-radius: 20px;
-        min-width: 40px;
+        min-width: 60px;
         text-align: center;
+        font-size: 0.95rem;
     }
     
-    section[data-testid="stSidebar"] {
-        width: 320px !important; /* زيادة عرض القائمة الجانبية */
-        background: linear-gradient(180deg, #87CEEB 0%, #B0E2FF 50%, #87CEFA 100%);
-        color: white;
-}
-    
-    /* تكبير الخط في القائمة الجانبية */
-    section[data-testid="stSidebar"] .st-emotion-cache-16idsys p {
-        font-size: 1.1rem !important;
-        font-weight: 600;
-    }
-
-
-    .sidebar-content {
-        padding: 20px;
-}
-    
-    .sidebar-title {
-        color: white;
-        font-weight: 700;
-        margin-bottom: 20px;
+    /* === الصورة اللوجو === */
+    .logo-container {
         text-align: center;
-        font-size: 24px;
-        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
-}
+        margin-bottom: 1.5rem;
+    }
     
-    .sidebar-item {
-       padding: 12px 15px;
-       margin: 8px 0;
-       border-radius: 8px;
-       transition: background-color 0.3s ease;
-       cursor: pointer;
-       color: white;
-       font-weight: 500;
-       font-size: 16px;
-       text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
-
-}
-    
-    .sidebar-item:hover {
-       background-color: rgba(255, 255, 255, 0.2);
-       color: white;
-}
-    
-    .sidebar-item.active {
-       background-color: rgba(255, 255, 255, 0.3);
-       color: white;
-       font-weight: 600;
-       background-color: rgba(255, 255, 255, 0.4);
-
-}
-    
-    /* تحسين المظهر للجداول */
-    .dataframe {
+    .logo-container img {
+        max-width: 150px;
+        height: auto;
         border-radius: 8px;
-        overflow: hidden;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     }
     
-    .dataframe th {
-        background-color: #1e40af !important;
-        color: white !important;
-        font-weight: 600;
-        padding: 12px;
+    /* === التذييل (Footer) === */
+    .footer {
+        text-align: center;
+        margin-top: 3rem;
+        padding: 2rem;
+        border-top: 1px solid #e5e7eb;
+        color: #6b7280;
+        font-size: 0.9rem;
+        background-color: #f9fafb;
+        line-height: 1.6;
     }
     
-    .dataframe td {
-        padding: 10px;
-        border-bottom: 1px solid #e2e8f0;
-        color: #000 !important;
-        font-weight: bold !important;
+    /* === القائمة الجانبية (Sidebar) === */
+    section[data-testid="stSidebar"] {
+        width: 280px !important;
+        background: linear-gradient(180deg, #1e40af 0%, #1a3a8a 100%);
+        color: white;
     }
     
-    .dataframe tr:hover {
-        background-color: #f1f5f9 !important;
+    section[data-testid="stSidebar"] * {
+        color: white;
+        font-family: 'Cairo', 'IBM Plex Sans Arabic', sans-serif;
     }
     
-    /* تحسين أزرار التنزيل */
-    .stDownloadButton>button {
-        background-color: #10b981;
+    section[data-testid="stSidebar"] p {
+        color: white;
+        font-size: 0.95rem;
+        line-height: 1.6;
+    }
+    
+    section[data-testid="stSidebar"] button {
         width: 100%;
+        margin-bottom: 0.5rem;
     }
     
-    .stDownloadButton>button:hover {
-        background-color: #059669;
+    /* === الأقسام المطوية (Expander) === */
+    .streamlit-expanderHeader {
+        font-weight: 700;
+        font-size: 1rem;
+        color: #1e40af;
     }
     
-    /* تحسين أزرار الحذف */
-    .delete-button>button {
-        background-color: #ef4444;
-    }
-    
-    .delete-button>button:hover {
-        background-color: #dc2626;
-    }
-    
-    /* تحسين رسائل التنبيه */
+    /* === الرسائل === */
     .stAlert {
         border-radius: 8px;
+        font-family: 'Cairo', 'IBM Plex Sans Arabic', sans-serif;
+        line-height: 1.6;
     }
     
-    /* تحسين الأقسام القابلة للطي */
-    .streamlit-expanderHeader {
-        font-weight: 600;
-        font-size: 18px;
-        color: #1e40af;
+    /* === التناسب والمسافات === */
+    .stColumn {
+        padding: 1rem;
     }
     
-    /* تحسين أشرطة التقدم */
+    /* === شريط التقدم === */
     .stProgress > div > div > div {
-        background-color: #1e40af;
+        background-color: #1e40af !important;
+    }
+    
+    /* === المقدمة والملاحظات === */
+    .stMarkdown {
+        line-height: 1.8;
+    }
+    
+    /* === تحسين القراءة العام === */
+    body {
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        letter-spacing: 0.3px;
     }
 </style>
 """, unsafe_allow_html=True)
