@@ -3465,8 +3465,11 @@ def admin_requests_ui():
     # إضافة فلتر القطاع بناءً على دور المستخدم
     sector_filter, sector_params = get_user_sector_filter(user)
     if sector_filter:
-        conditions.append(sector_filter.replace(" AND ", ""))
-        params.extend(sector_params)
+        # تنظيف الفلتر من " AND " في البداية والنهاية
+        clean_filter = sector_filter.strip().replace(" AND ", "").strip()
+        if clean_filter and clean_filter != "1=0":
+            conditions.append(clean_filter)
+            params.extend(sector_params)
     
     if not show_deleted:
         conditions.append("r.deleted_at IS NULL")
@@ -3498,15 +3501,23 @@ def admin_requests_ui():
         conditions.append("DATE(r.created_at) <= ?")
         params.append(end_date.isoformat())
     
+    # بناء الاستعلام النهائي
     if conditions:
-        q = base_query + " AND " + " AND ".join(conditions)
+        where_clause = " AND ".join(conditions)
+        q = base_query.replace("WHERE 1=1", f"WHERE {where_clause}")
     else:
         q = base_query
-    
+
     q += " ORDER BY r.created_at DESC"
 
-    with get_conn() as conn:
-        rows = conn.execute(q, tuple(params)).fetchall()
+    try:
+        with get_conn() as conn:
+            rows = conn.execute(q, tuple(params)).fetchall()
+    except sqlite3.OperationalError as e:
+        st.error(f"خطأ في الاستعلام: {str(e)}")
+        st.info(f"Query: {q}")
+        st.info(f"Params: {params}")
+        rows = []
     
     df = pd.DataFrame([dict(r) for r in rows]) if rows else pd.DataFrame()
     st.dataframe(df, use_container_width=True)
