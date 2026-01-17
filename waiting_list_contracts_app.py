@@ -172,48 +172,48 @@ for p in [DB_PATH.parent, STORAGE_DIR, EXPORTS_DIR, RESOURCES_DIR, BACKUP_DIR]:
 # ---------------------------- أنماط CSS مخصصة - محسّنة للقراءة (UI/UX Enhanced) ---------------------- #
 st.markdown("""
 <style>
-    /* استيراد الخط العربي الاحترافي الموحد */
+    /* تحميل Material Icons صراحة - النظام الأساسي */
+    @import url('https://fonts.googleapis.com/icon?family=Material+Icons');
+    
+    /* استيراد الخط العربي - فقط للنصوص والمحتوى */
     @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700&display=swap');
     @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap');
     
-    /* تحميل Material Icons صراحة */
-    @import url('https://fonts.googleapis.com/icon?family=Material+Icons');
-    
-    /* ✅ تطبيق الخط العربي فقط على عناصر النصوص المحددة بدقة - بدون تأثيرات عامة */
-    p, h1, h2, h3, h4, h5, h6, label, a, li {
+    /* تطبيق الخط العربي فقط على عناصر النصوص في الصفحة الرئيسية - بدون تأثيرات عامة */
+    .main p, 
+    .main h1, 
+    .main h2, 
+    .main h3, 
+    .main h4, 
+    .main h5, 
+    .main h6, 
+    .main label, 
+    .main a, 
+    .main li {
         font-family: 'Cairo', 'IBM Plex Sans Arabic', sans-serif;
     }
     
-    /* ✅ input و textarea و select فقط */
-    input, textarea, select {
+    /* تطبيق الخط العربي على عناصر الإدخال فقط */
+    .stTextInput input, 
+    .stNumberInput input, 
+    .stSelectbox select, 
+    .stTextArea textarea, 
+    .stDateInput input, 
+    .stTimeInput input {
         font-family: 'Cairo', 'IBM Plex Sans Arabic', sans-serif !important;
     }
     
-    /* ✅ button فقط */
-    button {
+    /* تطبيق الخط العربي على الأزرار فقط */
+    .stButton button, 
+    .stDownloadButton button, 
+    .stForm button {
         font-family: 'Cairo', 'IBM Plex Sans Arabic', sans-serif !important;
-    }
-    
-    /* ✅✅✅ استثناء ABSOLUTE للأيقونات - بدون أي تأثيرات عامة */
-    .material-icons,
-    .material-icons-outlined,
-    .material-icons-round,
-    .material-icons-sharp,
-    i,
-    svg,
-    [class*="icon"],
-    i[class*="fa-"] {
-        font-family: 'Material Icons', Arial, sans-serif !important;
-        font-weight: normal !important;
-        font-style: normal !important;
-        letter-spacing: normal !important;
     }
     
     /* === الصفحة الرئيسية === */
     .main {
         background-color: #f8f9fa;
         color: #1f2937;
-        font-family: 'Cairo', 'IBM Plex Sans Arabic', sans-serif;
         max-width: 100%;
         padding: 2rem;
         margin: 0;
@@ -278,7 +278,6 @@ st.markdown("""
         border: 1.5px solid #cbd5e1;
         border-radius: 8px;
         padding: 0.75rem;
-        font-family: 'Cairo', 'IBM Plex Sans Arabic', sans-serif;
         font-size: 1rem;
         line-height: 1.5;
         transition: border-color 0.3s ease, box-shadow 0.3s ease;
@@ -321,7 +320,6 @@ st.markdown("""
     .stButton > button,
     .stDownloadButton > button,
     .stForm button {
-        font-family: 'Cairo', 'IBM Plex Sans Arabic', sans-serif;
         font-weight: 600;
         font-size: 1rem;
         border: none;
@@ -358,7 +356,6 @@ st.markdown("""
         height: 50px;
         font-size: 1rem;
         font-weight: 600;
-        font-family: 'Cairo', 'IBM Plex Sans Arabic', sans-serif;
         padding: 12px 20px;
     }
     
@@ -374,7 +371,6 @@ st.markdown("""
     .stDataFrame table {
         width: 100% !important;
         border-collapse: collapse;
-        font-family: 'Cairo', 'IBM Plex Sans Arabic', sans-serif;
     }
     
     .stDataFrame th {
@@ -526,52 +522,6 @@ st.markdown("""
         line-height: 1.6;
     }
     
-    /* === القائمة الجانبية (Sidebar) === */
-    section[data-testid="stSidebar"] {
-        width: 280px !important;
-        background: linear-gradient(180deg, #1e40af 0%, #1a3a8a 100%);
-        color: white;
-    }
-    
-    /* ✅ إعادة تعيين div و span في Sidebar */
-    section[data-testid="stSidebar"] div,
-    section[data-testid="stSidebar"] span {
-        font-family: inherit !important;
-    }
-    
-    /* ✅ تطبيق الخط على النصوص فقط في Sidebar */
-    section[data-testid="stSidebar"] p,
-    section[data-testid="stSidebar"] label,
-    section[data-testid="stSidebar"] a {
-        font-family: 'Cairo', 'IBM Plex Sans Arabic', sans-serif;
-        color: white;
-    }
-    
-    section[data-testid="stSidebar"] p {
-        color: white;
-        font-size: 0.95rem;
-        line-height: 1.6;
-    }
-    
-    section[data-testid="stSidebar"] button {
-        width: 100%;
-        margin-bottom: 0.5rem;
-        font-family: 'Cairo', 'IBM Plex Sans Arabic', sans-serif;
-    }
-    
-    /* ✅✅✅ استثناء ABSOLUTE للأيقونات في Sidebar */
-    section[data-testid="stSidebar"] .material-icons,
-    section[data-testid="stSidebar"] .material-icons-outlined,
-    section[data-testid="stSidebar"] .material-icons-round,
-    section[data-testid="stSidebar"] i,
-    section[data-testid="stSidebar"] svg,
-    section[data-testid="stSidebar"] [class*="icon"],
-    section[data-testid="stSidebar"] i[class*="fa-"] {
-        font-family: 'Material Icons', Arial, sans-serif !important;
-        font-weight: normal !important;
-        font-style: normal !important;
-    }
-    
     /* === الأقسام المطوية (Expander) === */
     .streamlit-expanderHeader {
         font-weight: 700;
@@ -582,7 +532,6 @@ st.markdown("""
     /* === الرسائل === */
     .stAlert {
         border-radius: 8px;
-        font-family: 'Cairo', 'IBM Plex Sans Arabic', sans-serif;
         line-height: 1.6;
     }
     
@@ -2245,7 +2194,6 @@ def hospital_home():
     logo_path = Path("static/logo.png")
 
     menu_items = ["🏠 الصفحة الرئيسية", "📝 تقديم طلب جديد", "📂 طلباتي", "📥 ملفات للتنزيل", "🔑 تغيير كلمة المرور", "🚪 تسجيل الخروج"]
-    menu_icons = ["house-fill", "file-earmark-plus-fill", "folder-fill", "download", "key-fill", "box-arrow-right"]
 
     with st.sidebar:
         if logo_path.exists():
@@ -2257,7 +2205,8 @@ def hospital_home():
         # Render notifications in the sidebar (helper enforces structure and buttons)
         render_sidebar_notifications(user)
 
-        selection = option_menu(None, menu_items, icons=menu_icons, menu_icon="cast", default_index=0)
+        # استخدام Streamlit الافتراضي selectbox بدون مكونات خارجية
+        selection = st.selectbox("القائمة", menu_items, index=0, key="hospital_menu")
 
     # Mapping selection to functions
     menu_options = {"🏠 الصفحة الرئيسية": hospital_dashboard_ui, "📝 تقديم طلب جديد": hospital_new_request_ui, "📂 طلباتي": hospital_requests_ui, "📥 ملفات للتنزيل": lambda u: resources_download_ui(), "🔑 تغيير كلمة المرور": lambda u: change_password_ui(user_id=u["id"], user_table="hospitals")}
@@ -3010,17 +2959,14 @@ def admin_home():
     
     admin_menu = {
         "items": ["🏥 إدارة المستشفيات", "🧾 إدارة الطلبات", "📊 الإحصائيات", "📜 سجل النشاط", "🧩 إدارة الإعدادات", "👥 إدارة المستخدمين", "💾 إدارة النسخ الاحتياطي", "📥 إدارة ملفات التنزيل", "🔑 تغيير كلمة المرور"],
-        "icons": ["hospital", "card-list", "bar-chart-line", "clock-history", "gear", "people", "hdd-stack", "download", "key-fill"],
         "functions": [admin_hospitals_ui, admin_requests_ui, admin_statistics_ui, admin_activity_log_ui, admin_lists_ui, admin_users_ui, admin_backup_ui, admin_resources_ui, lambda: change_password_ui(user_id=user["id"], user_table="admins")]
     }
     reviewer_general_menu = {
         "items": ["🧾 مراجعة الطلبات", "📊 الإحصائيات", "🔑 تغيير كلمة المرور"],
-        "icons": ["card-list", "bar-chart-line", "key-fill"],
         "functions": [admin_requests_ui, admin_statistics_ui, lambda: change_password_ui(user_id=user["id"], user_table="admins")]
     }
     reviewer_sector_menu = {
         "items": ["🧾 مراجعة الطلبات", "📊 الإحصائيات", "🔑 تغيير كلمة المرور"],
-        "icons": ["card-list", "bar-chart-line", "key-fill"],
         "functions": [admin_requests_ui, admin_statistics_ui, lambda: change_password_ui(user_id=user["id"], user_table="admins")]
     }
     
@@ -3037,15 +2983,15 @@ def admin_home():
         # Sidebar notifications (full list) - rendered by helper to enforce strict UI rules
         render_sidebar_notifications(user)
 
-        selection = option_menu("القائمة", menu["items"] + ["🚪 تسجيل الخروج"], 
-                                icons=menu["icons"] + ["box-arrow-right"], 
-                                menu_icon="person-workspace", default_index=0)
+        # استخدام Streamlit الافتراضي selectbox بدون مكونات خارجية
+        menu_with_logout = menu["items"] + ["🚪 تسجيل الخروج"]
+        selection = st.selectbox("القائمة", menu_with_logout, index=0, key="admin_menu")
 
     if selection == "🚪 تسجيل الخروج":
         st.session_state.pop("user", None)
         st.rerun()
     else:
-        selected_index = (menu["items"] + ["🚪 تسجيل الخروج"]).index(selection)
+        selected_index = menu_with_logout.index(selection)
         menu["functions"][selected_index]()
 
 def admin_hospitals_ui():
