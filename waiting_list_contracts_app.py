@@ -176,15 +176,29 @@ st.markdown("""
     @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700&display=swap');
     @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap');
     
-    /* === الإعدادات العامة === */
-    * {
-        font-family: 'Cairo', 'IBM Plex Sans Arabic', sans-serif !important;
-    }
+    /* تحميل Material Icons صراحة */
+    @import url('https://fonts.googleapis.com/icon?family=Material+Icons');
     
+    /* === الإعدادات الأساسية === */
     html, body {
         direction: rtl;
         text-align: right;
+    }
+    
+    /* تطبيق الخط العربي فقط على النصوص والعناوين */
+    body, p, span, div, label, button, input, textarea, select {
         font-family: 'Cairo', 'IBM Plex Sans Arabic', sans-serif;
+    }
+    
+    /* ✅ استثناء الأيقونات من الخط العربي */
+    .material-icons,
+    .material-icons-outlined,
+    .material-icons-rounded,
+    [class*="icon"],
+    .st-emotion-cache-1dp5vir,
+    i[class*="fa-"],
+    svg {
+        font-family: 'Material Icons' !important;
     }
     
     /* === الصفحة الرئيسية === */
@@ -511,9 +525,13 @@ st.markdown("""
         color: white;
     }
     
-    section[data-testid="stSidebar"] * {
-        color: white;
+    /* تطبيق الخط على النصوص فقط في Sidebar */
+    section[data-testid="stSidebar"] p,
+    section[data-testid="stSidebar"] label,
+    section[data-testid="stSidebar"] span,
+    section[data-testid="stSidebar"] div:not([class*="icon"]) {
         font-family: 'Cairo', 'IBM Plex Sans Arabic', sans-serif;
+        color: white;
     }
     
     section[data-testid="stSidebar"] p {
@@ -525,6 +543,14 @@ st.markdown("""
     section[data-testid="stSidebar"] button {
         width: 100%;
         margin-bottom: 0.5rem;
+        font-family: 'Cairo', 'IBM Plex Sans Arabic', sans-serif;
+    }
+    
+    /* ✅ استثناء الأيقونات في Sidebar */
+    section[data-testid="stSidebar"] .material-icons,
+    section[data-testid="stSidebar"] i[class*="fa-"],
+    section[data-testid="stSidebar"] svg {
+        font-family: 'Material Icons' !important;
     }
     
     /* === الأقسام المطوية (Expander) === */
