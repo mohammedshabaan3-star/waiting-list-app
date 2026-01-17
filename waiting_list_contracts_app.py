@@ -600,13 +600,6 @@ st.markdown("""
     .stMarkdown {
         line-height: 1.8;
     }
-    
-    /* === تحسين القراءة العام === */
-    body {
-        -webkit-font-smoothing: antialiased;
-        -moz-osx-font-smoothing: grayscale;
-        letter-spacing: 0.3px;
-    }
 </style>
 """, unsafe_allow_html=True)
 
