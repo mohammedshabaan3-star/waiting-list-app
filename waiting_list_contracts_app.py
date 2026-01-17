@@ -185,20 +185,55 @@ st.markdown("""
         text-align: right;
     }
     
-    /* تطبيق الخط العربي فقط على النصوص والعناوين */
-    body, p, span, div, label, button, input, textarea, select {
+    /* ✅ تطبيق الخط العربي فقط على عناصر النصوص المحددة بدقة */
+    p, h1, h2, h3, h4, h5, h6, label, a, li {
         font-family: 'Cairo', 'IBM Plex Sans Arabic', sans-serif;
     }
     
-    /* ✅ استثناء الأيقونات من الخط العربي */
+    /* ✅ input و textarea و select فقط */
+    input, textarea, select {
+        font-family: 'Cairo', 'IBM Plex Sans Arabic', sans-serif !important;
+    }
+    
+    /* ✅ button فقط */
+    button {
+        font-family: 'Cairo', 'IBM Plex Sans Arabic', sans-serif !important;
+    }
+    
+    /* ✅✅✅ استثناء ABSOLUTE للأيقونات - بأولوية عالية جداً */
     .material-icons,
     .material-icons-outlined,
-    .material-icons-rounded,
+    .material-icons-round,
+    .material-icons-sharp,
+    i,
+    svg,
     [class*="icon"],
     .st-emotion-cache-1dp5vir,
     i[class*="fa-"],
-    svg {
-        font-family: 'Material Icons' !important;
+    button i,
+    button svg,
+    [role="button"] svg,
+    .st-write-content svg,
+    .streamlit-expanderHeader svg {
+        font-family: 'Material Icons', Arial, sans-serif !important;
+        font-weight: normal !important;
+        font-style: normal !important;
+        letter-spacing: normal !important;
+    }
+    
+    /* ✅ إعادة تعيين div و span و container إلى الافتراضي */
+    div {
+        font-family: inherit !important;
+    }
+    
+    span {
+        font-family: inherit !important;
+    }
+    
+    .st-emotion-cache-13ln4jf,
+    .st-emotion-cache-16idsys,
+    .st-emotion-cache-1gv0re1 {
+        font-family: inherit !important;
     }
     
     /* === الصفحة الرئيسية === */
@@ -525,11 +560,16 @@ st.markdown("""
         color: white;
     }
     
-    /* تطبيق الخط على النصوص فقط في Sidebar */
+    /* ✅ إعادة تعيين div و span في Sidebar */
+    section[data-testid="stSidebar"] div,
+    section[data-testid="stSidebar"] span {
+        font-family: inherit !important;
+    }
+    
+    /* ✅ تطبيق الخط على النصوص فقط في Sidebar */
     section[data-testid="stSidebar"] p,
     section[data-testid="stSidebar"] label,
-    section[data-testid="stSidebar"] span,
-    section[data-testid="stSidebar"] div:not([class*="icon"]) {
+    section[data-testid="stSidebar"] a {
         font-family: 'Cairo', 'IBM Plex Sans Arabic', sans-serif;
         color: white;
     }
@@ -546,11 +586,17 @@ st.markdown("""
         font-family: 'Cairo', 'IBM Plex Sans Arabic', sans-serif;
     }
     
-    /* ✅ استثناء الأيقونات في Sidebar */
+    /* ✅✅✅ استثناء ABSOLUTE للأيقونات في Sidebar */
     section[data-testid="stSidebar"] .material-icons,
-    section[data-testid="stSidebar"] i[class*="fa-"],
-    section[data-testid="stSidebar"] svg {
-        font-family: 'Material Icons' !important;
+    section[data-testid="stSidebar"] .material-icons-outlined,
+    section[data-testid="stSidebar"] .material-icons-round,
+    section[data-testid="stSidebar"] i,
+    section[data-testid="stSidebar"] svg,
+    section[data-testid="stSidebar"] [class*="icon"],
+    section[data-testid="stSidebar"] i[class*="fa-"] {
+        font-family: 'Material Icons', Arial, sans-serif !important;
+        font-weight: normal !important;
+        font-style: normal !important;
     }
     
     /* === الأقسام المطوية (Expander) === */
