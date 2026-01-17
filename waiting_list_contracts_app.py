@@ -179,13 +179,7 @@ st.markdown("""
     /* تحميل Material Icons صراحة */
     @import url('https://fonts.googleapis.com/icon?family=Material+Icons');
     
-    /* === الإعدادات الأساسية === */
-    html, body {
-        direction: rtl;
-        text-align: right;
-    }
-    
-    /* ✅ تطبيق الخط العربي فقط على عناصر النصوص المحددة بدقة */
+    /* ✅ تطبيق الخط العربي فقط على عناصر النصوص المحددة بدقة - بدون تأثيرات عامة */
     p, h1, h2, h3, h4, h5, h6, label, a, li {
         font-family: 'Cairo', 'IBM Plex Sans Arabic', sans-serif;
     }
@@ -200,7 +194,7 @@ st.markdown("""
         font-family: 'Cairo', 'IBM Plex Sans Arabic', sans-serif !important;
     }
     
-    /* ✅✅✅ استثناء ABSOLUTE للأيقونات - بأولوية عالية جداً */
+    /* ✅✅✅ استثناء ABSOLUTE للأيقونات - بدون أي تأثيرات عامة */
     .material-icons,
     .material-icons-outlined,
     .material-icons-round,
@@ -208,44 +202,23 @@ st.markdown("""
     i,
     svg,
     [class*="icon"],
-    .st-emotion-cache-1dp5vir,
-    i[class*="fa-"],
-    button i,
-    button svg,
-    [role="button"] svg,
-    .st-write-content svg,
-    .streamlit-expanderHeader svg {
+    i[class*="fa-"] {
         font-family: 'Material Icons', Arial, sans-serif !important;
         font-weight: normal !important;
         font-style: normal !important;
         letter-spacing: normal !important;
     }
     
-    /* ✅ إعادة تعيين div و span و container إلى الافتراضي */
-    div {
-        font-family: inherit !important;
-    }
-    
-    span {
-        font-family: inherit !important;
-    }
-    
-    .st-emotion-cache-13ln4jf,
-    .st-emotion-cache-16idsys,
-    .st-emotion-cache-1gv0re1 {
-        font-family: inherit !important;
-    }
-    
     /* === الصفحة الرئيسية === */
     .main {
         background-color: #f8f9fa;
         color: #1f2937;
-        direction: rtl;
         font-family: 'Cairo', 'IBM Plex Sans Arabic', sans-serif;
         max-width: 100%;
         padding: 2rem;
         margin: 0;
         line-height: 1.8;
+        text-align: right;
     }
     
     /* === العناوين - التسلسل البصري الموحد === */
