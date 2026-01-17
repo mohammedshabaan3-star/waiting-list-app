@@ -53,48 +53,6 @@ import pandas as pd
 from contextlib import contextmanager
 import sqlite3
 import streamlit as st
-try:
-    from streamlit_option_menu import option_menu
-    OPTION_MENU_AVAILABLE = True
-except ImportError:
-    OPTION_MENU_AVAILABLE = False
-    st.warning("⚠️ streamlit-option-menu component is not available. Using fallback navigation.")
-
-def safe_option_menu(menu_title, options, icons=None, menu_icon=None, default_index=0, key=None):
-    """
-    Safe wrapper for option_menu with fallback to native Streamlit components
-    """
-    if OPTION_MENU_AVAILABLE:
-        try:
-            return option_menu(
-                menu_title=menu_title,
-                options=options,
-                icons=icons,
-                menu_icon=menu_icon,
-                default_index=default_index,
-                key=key
-            )
-        except Exception as e:
-            st.error(f"Error loading option_menu component: {str(e)}")
-            st.info("Falling back to native Streamlit navigation...")
-    
-    # Fallback implementation using native Streamlit components
-    if menu_title:
-        st.sidebar.markdown(f"### {menu_title}")
-    
-    # Create a unique key for the selectbox
-    selectbox_key = f"fallback_menu_{key}" if key else "fallback_menu"
-    
-    # Use selectbox as fallback
-    selected_index = st.sidebar.selectbox(
-        "اختر من القائمة:",
-        range(len(options)),
-        format_func=lambda x: options[x],
-        index=default_index,
-        key=selectbox_key
-    )
-    
-    return options[selected_index]
 import plotly.express as px
 import plotly.graph_objects as go
 import time
