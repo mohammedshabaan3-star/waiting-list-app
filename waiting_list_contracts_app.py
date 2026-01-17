@@ -97,15 +97,9 @@ def safe_option_menu(menu_title, options, icons=None, menu_icon=None, default_in
     return options[selected_index]
 import plotly.express as px
 import plotly.graph_objects as go
-import secrets
 import time
-import threading
-import socket
 import shutil
 import json
-import schedule
-import asyncio
-from concurrent.futures import ThreadPoolExecutor
 
 # ---------------------------- إعدادات أساسية ---------------------------- #
 APP_TITLE = "المشروع القومي لقوائم الانتظار - التعاقد على الخدمات الجراحية"

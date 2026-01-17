@@ -1,0 +1,92 @@
+# Database
+data/app.db
+data/app.db-wal
+data/app.db-shm
+data/notifications.json
+
+# Storage and uploads
+storage/
+uploads/
+exports/
+
+# Backups
+backups/
+*.backup
+*.bak
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+pip-log.txt
+pip-delete-this-directory.txt
+.venv
+env/
+venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Streamlit
+.streamlit/secrets.toml
+.streamlit/cache/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Credentials and sensitive files
+credentials*.xlsx
+credentials*.xls
+auth*.json
+secret*.json
+
+# Windows batch files
+*.bat
+*.exe
+
+# Temporary files
+*.tmp
+temp/
+.cache/
+
+# Application specific
+nssm.exe
+check_service.bat
+install_service_server.bat
+start_streamlit_server.bat
+New Text Document.txt
+hospitals.xlsx
+
+# Docker
+.dockerignore
+Dockerfile
+
+# Git
+.git/
+.gitattributes
