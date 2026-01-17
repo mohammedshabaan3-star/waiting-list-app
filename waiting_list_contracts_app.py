@@ -188,62 +188,62 @@ st.markdown(f"""
     }}
     
     /* === الصفحة الرئيسية === */
-    .main {
-        background-color: #f8f9fa;
-        color: #1f2937;
+    .main {{
+        background-color: {COLOR_PALETTE['background']};
+        color: {COLOR_PALETTE['text']};
         max-width: 100%;
         padding: 2rem;
         margin: 0;
         line-height: 1.8;
         text-align: right;
-    }
+    }}
     
     /* === العناوين - التسلسل البصري الموحد === */
-    h1 {
-        color: #0f172a;
+    h1 {{
+        color: {COLOR_PALETTE['primary_dark']};
         font-weight: 700;
         font-size: 2rem;
         margin-bottom: 1.5rem;
         margin-top: 0;
         line-height: 1.3;
-    }
+    }}
     
-    h2 {
-        color: #1e40af;
+    h2 {{
+        color: {COLOR_PALETTE['primary']};
         font-weight: 700;
         font-size: 1.5rem;
         margin-bottom: 1rem;
         margin-top: 1.5rem;
-    }
+    }}
     
-    h3 {
-        color: #1e40af;
+    h3 {{
+        color: {COLOR_PALETTE['primary']};
         font-weight: 600;
         font-size: 1.25rem;
         margin-bottom: 0.75rem;
-    }
+    }}
     
-    h4, h5, h6 {
-        color: #374151;
+    h4, h5, h6 {{
+        color: {COLOR_PALETTE['text']};
         font-weight: 600;
         margin-bottom: 0.5rem;
-    }
+    }}
     
-    p {
+    p {{
         font-size: 1rem;
         line-height: 1.7;
-        color: #1f2937;
-    }
+        color: {COLOR_PALETTE['text']};
+    }}
     
     /* === النماذج (Forms) - تحسين UX === */
-    .stForm {
-        border: 1px solid #cbd5e1;
+    .stForm {{
+        border: 1px solid {COLOR_PALETTE['border']};
         border-radius: 12px;
         padding: 1.5rem;
-        background-color: white;
+        background-color: {COLOR_PALETTE['white']};
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
         max-width: 100%;
-    }
+    }}
     
     /* === حقول الإدخال === */
     .stTextInput > div > div > input,
@@ -251,32 +251,32 @@ st.markdown(f"""
     .stSelectbox > div > div > select,
     .stTextArea > div > div > textarea,
     .stDateInput > div > div > input,
-    .stTimeInput > div > div > input {
-        border: 1.5px solid #cbd5e1;
+    .stTimeInput > div > div > input {{
+        border: 1.5px solid {COLOR_PALETTE['border']};
         border-radius: 8px;
         padding: 0.75rem;
         font-size: 1rem;
         line-height: 1.5;
         transition: border-color 0.3s ease, box-shadow 0.3s ease;
-        background-color: white;
-        color: #1f2937;
-    }
+        background-color: {COLOR_PALETTE['white']};
+        color: {COLOR_PALETTE['text']};
+    }}
     
     .stTextInput > div > div > input::placeholder,
-    .stTextArea > div > div > textarea::placeholder {
-        color: #9ca3af;
-    }
+    .stTextArea > div > div > textarea::placeholder {{
+        color: {COLOR_PALETTE['text_light']};
+    }}
     
     .stTextInput > div > div > input:focus,
     .stNumberInput > div > div > input:focus,
     .stSelectbox > div > div > select:focus,
     .stTextArea > div > div > textarea:focus,
     .stDateInput > div > div > input:focus,
-    .stTimeInput > div > div > input:focus {
-        border-color: #1e40af;
+    .stTimeInput > div > div > input:focus {{
+        border-color: {COLOR_PALETTE['primary']};
         box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.15);
         outline: none;
-    }
+    }}
     
     /* === التسميات (Labels) === */
     .stTextInput label,
@@ -286,17 +286,15 @@ st.markdown(f"""
     .stDateInput label,
     .stTimeInput label,
     .stCheckbox label,
-    .stRadio label {
+    .stRadio label {{
         font-weight: 600;
-        color: #374151;
+        color: {COLOR_PALETTE['text']};
         margin-bottom: 0.5rem;
         font-size: 0.95rem;
-    }
+    }}
     
-    /* === الأزرار === */
-    .stButton > button,
-    .stDownloadButton > button,
-    .stForm button {
+    /* === الأزرار - موحدة حسب الوظيفة === */
+    .stButton > button {{
         font-weight: 600;
         font-size: 1rem;
         border: none;
@@ -304,228 +302,279 @@ st.markdown(f"""
         padding: 0.75rem 1.5rem;
         transition: all 0.3s ease;
         cursor: pointer;
-    }
+        background-color: {COLOR_PALETTE['primary']};
+        color: {COLOR_PALETTE['white']};
+    }}
     
-    .stButton > button {
-        background-color: #1e40af;
-        color: white;
-    }
-    
-    .stButton > button:hover {
-        background-color: #1a3a8a;
-        transform: translateY(-1px);
+    .stButton > button:hover {{
+        background-color: {COLOR_PALETTE['primary_dark']};
+        transform: translateY(-2px);
         box-shadow: 0 4px 12px rgba(30, 64, 175, 0.3);
-    }
+    }}
     
-    .stDownloadButton > button {
-        background-color: #10b981;
-        color: white;
+    .stButton > button:active {{
+        transform: translateY(0);
+        box-shadow: 0 2px 6px rgba(30, 64, 175, 0.2);
+    }}
+    
+    /* === أزرار التنزيل (Download/Success) === */
+    .stDownloadButton > button {{
+        background-color: {COLOR_PALETTE['success']};
+        color: {COLOR_PALETTE['white']};
         width: 100%;
-    }
+        font-weight: 600;
+        font-size: 1rem;
+        border: none;
+        border-radius: 8px;
+        padding: 0.75rem 1.5rem;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }}
     
-    .stDownloadButton > button:hover {
+    .stDownloadButton > button:hover {{
         background-color: #059669;
         box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
-    }
+    }}
+    
+    /* === أزرار الحفظ (Form Submit) === */
+    .stForm button {{
+        font-weight: 600;
+        font-size: 1rem;
+        border: none;
+        border-radius: 8px;
+        padding: 0.75rem 1.5rem;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }}
+    
+    .stForm button:not([style*="background-color: rgb(239, 68, 68"]):not([style*="background-color: rgb(245, 158, 11"]) {{
+        background-color: {COLOR_PALETTE['success']};
+        color: {COLOR_PALETTE['white']};
+    }}
+    
+    .stForm button:hover:not([style*="background-color: rgb(239, 68, 68"]):not([style*="background-color: rgb(245, 158, 11"]) {{
+        background-color: #059669;
+    }}
     
     /* === التبويبات === */
-    .stTabs [data-baseweb="tab"] {
+    .stTabs [data-baseweb="tab"] {{
         height: 50px;
         font-size: 1rem;
         font-weight: 600;
         padding: 12px 20px;
-    }
+    }}
     
     /* === الجداول - CRITICAL === */
-    .stDataFrame {
+    .stDataFrame {{
         width: 100% !important;
-    }
+    }}
     
-    .stDataFrame > div {
+    .stDataFrame > div {{
         width: 100% !important;
-    }
+    }}
     
-    .stDataFrame table {
+    .stDataFrame table {{
         width: 100% !important;
         border-collapse: collapse;
-    }
+    }}
     
-    .stDataFrame th {
-        background-color: #1e40af !important;
-        color: white !important;
+    .stDataFrame th {{
+        background-color: {COLOR_PALETTE['primary']} !important;
+        color: {COLOR_PALETTE['white']} !important;
         font-weight: 700 !important;
         padding: 14px !important;
         text-align: right !important;
-        border-bottom: 2px solid #1a3a8a !important;
+        border-bottom: 2px solid {COLOR_PALETTE['primary_dark']} !important;
         font-size: 0.95rem;
         line-height: 1.5;
-    }
+    }}
     
-    .stDataFrame td {
+    .stDataFrame td {{
         padding: 12px 14px !important;
-        border-bottom: 1px solid #e5e7eb !important;
-        color: #1f2937 !important;
+        border-bottom: 1px solid {COLOR_PALETTE['border']} !important;
+        color: {COLOR_PALETTE['text']} !important;
         font-weight: 500 !important;
         text-align: right !important;
         font-size: 0.95rem;
         line-height: 1.6;
-    }
+    }}
     
-    .stDataFrame tr:hover {
-        background-color: #f3f4f6 !important;
-    }
+    .stDataFrame tr:hover {{
+        background-color: {COLOR_PALETTE['primary_light']} !important;
+    }}
     
-    .stDataFrame tr:nth-child(even) {
-        background-color: #f9fafb !important;
-    }
+    .stDataFrame tr:nth-child(even) {{
+        background-color: {COLOR_PALETTE['background']} !important;
+    }}
     
     /* === القوائم والقوائم المنسدلة === */
-    .stMultiSelect > div > div {
+    .stMultiSelect > div > div {{
         border-radius: 8px !important;
-        border: 1.5px solid #cbd5e1 !important;
-    }
+        border: 1.5px solid {COLOR_PALETTE['border']} !important;
+    }}
     
     /* === المربعات (Boxes) === */
-    .header {
+    .header {{
         text-align: center;
-        color: #0f172a;
+        color: {COLOR_PALETTE['primary_dark']};
         font-weight: 700;
         margin-bottom: 2rem;
         padding: 1.5rem;
-        background: linear-gradient(135deg, #f0f4ff 0%, #e6eeff 100%);
+        background: linear-gradient(135deg, {COLOR_PALETTE['primary_light']} 0%, #e6eeff 100%);
         border-radius: 12px;
         box-shadow: 0 2px 8px rgba(30, 64, 175, 0.1);
         font-size: 1.75rem;
         line-height: 1.4;
-    }
+    }}
     
-    .subheader {
-        color: #1a56db;
+    .subheader {{
+        color: {COLOR_PALETTE['primary']};
         font-weight: 700;
         margin-top: 1.5rem;
         margin-bottom: 1rem;
-        border-bottom: 3px solid #dbeafe;
+        border-bottom: 3px solid {COLOR_PALETTE['primary_light']};
         padding-bottom: 0.75rem;
         font-size: 1.25rem;
-    }
+    }}
     
-    .info-box {
-        background-color: #dbeafe;
+    .info-box {{
+        background-color: {COLOR_PALETTE['primary_light']};
         padding: 1.25rem;
         border-radius: 10px;
-        border-right: 5px solid #1e40af;
+        border-right: 5px solid {COLOR_PALETTE['primary']};
         margin: 1rem 0;
         box-shadow: 0 2px 6px rgba(30, 64, 175, 0.1);
-        color: #1e40af;
+        color: {COLOR_PALETTE['primary']};
         font-weight: 500;
-    }
+    }}
     
     /* === المربع اللوحي (Stats Card) === */
-    .stats-card {
-        background-color: white;
+    .stats-card {{
+        background-color: {COLOR_PALETTE['white']};
         border-radius: 12px;
         padding: 1.5rem;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
         margin-bottom: 1.5rem;
         width: 100%;
         transition: transform 0.3s ease, box-shadow 0.3s ease;
-        border: 1px solid #e5e7eb;
-    }
+        border: 1px solid {COLOR_PALETTE['border']};
+    }}
     
-    .stats-card:hover {
+    .stats-card:hover {{
         transform: translateY(-2px);
         box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
-    }
+    }}
     
-    .stats-header {
-        color: #0f172a;
+    .stats-header {{
+        color: {COLOR_PALETTE['primary_dark']};
         font-weight: 700;
         margin-bottom: 1.5rem;
         font-size: 1.25rem;
         text-align: center;
-        border-bottom: 2px solid #e5e7eb;
+        border-bottom: 2px solid {COLOR_PALETTE['border']};
         padding-bottom: 1rem;
-    }
+    }}
     
-    .stats-item {
+    .stats-item {{
         display: flex;
         justify-content: space-between;
         align-items: center;
         padding: 1rem 0;
-        border-bottom: 1px solid #f3f4f6;
+        border-bottom: 1px solid {COLOR_PALETTE['background']};
         gap: 1rem;
-    }
+    }}
     
-    .stats-label {
+    .stats-label {{
         font-weight: 600;
-        color: #374151;
+        color: {COLOR_PALETTE['text']};
         font-size: 0.95rem;
         flex: 1;
-    }
+    }}
     
-    .stats-value {
+    .stats-value {{
         font-weight: 700;
-        color: white;
-        background-color: #1e40af;
+        color: {COLOR_PALETTE['white']};
+        background-color: {COLOR_PALETTE['primary']};
         padding: 0.5rem 1rem;
         border-radius: 20px;
         min-width: 60px;
         text-align: center;
         font-size: 0.95rem;
-    }
+    }}
     
     /* === الصورة اللوجو === */
-    .logo-container {
+    .logo-container {{
         text-align: center;
         margin-bottom: 1.5rem;
-    }
+    }}
     
-    .logo-container img {
+    .logo-container img {{
         max-width: 150px;
         height: auto;
         border-radius: 8px;
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    }
+    }}
     
     /* === التذييل (Footer) === */
-    .footer {
+    .footer {{
         text-align: center;
         margin-top: 3rem;
         padding: 2rem;
-        border-top: 1px solid #e5e7eb;
-        color: #6b7280;
+        border-top: 1px solid {COLOR_PALETTE['border']};
+        color: {COLOR_PALETTE['text_light']};
         font-size: 0.9rem;
-        background-color: #f9fafb;
+        background-color: {COLOR_PALETTE['background']};
         line-height: 1.6;
-    }
+    }}
     
     /* === الأقسام المطوية (Expander) === */
-    .streamlit-expanderHeader {
+    .streamlit-expanderHeader {{
         font-weight: 700;
         font-size: 1rem;
-        color: #1e40af;
-    }
+        color: {COLOR_PALETTE['primary']};
+    }}
     
     /* === الرسائل === */
-    .stAlert {
+    .stAlert {{
         border-radius: 8px;
         line-height: 1.6;
-    }
+    }}
     
     /* === التناسب والمسافات === */
-    .stColumn {
+    .stColumn {{
         padding: 1rem;
-    }
+    }}
     
     /* === شريط التقدم === */
-    .stProgress > div > div > div {
-        background-color: #1e40af !important;
-    }
+    .stProgress > div > div > div {{
+        background-color: {COLOR_PALETTE['primary']} !important;
+    }}
     
     /* === المقدمة والملاحظات === */
-    .stMarkdown {
+    .stMarkdown {{
         line-height: 1.8;
-    }
+    }}
+    
+    /* === رسائل النجاح والخطأ والتحذير === */
+    .stSuccess {{
+        background-color: {COLOR_PALETTE['success_light']} !important;
+        border-left: 4px solid {COLOR_PALETTE['success']} !important;
+    }}
+    
+    .stError {{
+        background-color: {COLOR_PALETTE['error_light']} !important;
+        border-left: 4px solid {COLOR_PALETTE['error']} !important;
+    }}
+    
+    .stWarning {{
+        background-color: {COLOR_PALETTE['warning_light']} !important;
+        border-left: 4px solid {COLOR_PALETTE['warning']} !important;
+    }}
+    
+    .stInfo {{
+        background-color: {COLOR_PALETTE['primary_light']} !important;
+        border-left: 4px solid {COLOR_PALETTE['primary']} !important;
+    }}
 </style>
 """, unsafe_allow_html=True)
 
