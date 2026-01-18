@@ -132,14 +132,18 @@ for p in [DB_PATH.parent, STORAGE_DIR, EXPORTS_DIR, RESOURCES_DIR, BACKUP_DIR]:
 COLOR_PALETTE = {
     'primary': '#2563eb',            # أزرق حديث ومشرق
     'primary_dark': '#1e40af',       # أزرق داكن
+    'primary_dark_dark': '#1e3a8a',  # أزرق داكن جداً
     'primary_light': '#eff6ff',      # أزرق فاتح جداً
     'primary_accent': '#0ea5e9',     # أزرق سماوي
     'secondary': '#64748b',          # رمادي محترف
     'success': '#16a34a',            # أخضر حيوي
+    'success_dark': '#15803d',       # أخضر داكن
     'success_light': '#dcfce7',      # أخضر فاتح
     'warning': '#ea580c',            # برتقالي دافئ
+    'warning_dark': '#c2410c',       # برتقالي داكن
     'warning_light': '#fed7aa',      # برتقالي فاتح
     'error': '#dc2626',              # أحمر واضح
+    'error_dark': '#b91c1c',         # أحمر داكن
     'error_light': '#fee2e2',        # أحمر فاتح
     'background': '#f9fafb',         # خلفية فاتحة جداً
     'background_alt': '#f3f4f6',     # خلفية بديلة
@@ -210,10 +214,6 @@ st.markdown(f"""
         margin-bottom: 1.5rem;
         margin-top: 0;
         line-height: 1.2;
-        background: linear-gradient(135deg, {COLOR_PALETTE['primary']} 0%, {COLOR_PALETTE['primary_accent']} 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
     }}
     
     h2 {{
@@ -462,7 +462,7 @@ st.markdown(f"""
     }}
     
     .subheader {{
-        color: {COLOR_PALETTE['primary']};
+        color: {COLOR_PALETTE['primary_dark']};
         font-weight: 800;
         margin-top: 2rem;
         margin-bottom: 1.2rem;
@@ -473,13 +473,13 @@ st.markdown(f"""
     }}
     
     .info-box {{
-        background: linear-gradient(135deg, {COLOR_PALETTE['primary_light']} 0%, {COLOR_PALETTE['background']} 100%);
+        background: {COLOR_PALETTE['primary_light']};
         padding: 1.5rem;
         border-radius: 12px;
         border-right: 5px solid {COLOR_PALETTE['primary_accent']};
         margin: 1.5rem 0;
         box-shadow: 0 4px 15px rgba(14, 165, 233, 0.15);
-        color: {COLOR_PALETTE['primary']};
+        color: {COLOR_PALETTE['primary_dark']};
         font-weight: 600;
     }}
     
@@ -575,8 +575,8 @@ st.markdown(f"""
     .streamlit-expanderHeader {{
         font-weight: 800;
         font-size: 1.1rem;
-        color: {COLOR_PALETTE['primary']};
-        background: linear-gradient(135deg, {COLOR_PALETTE['primary_light']} 0%, {COLOR_PALETTE['background']} 100%);
+        color: {COLOR_PALETTE['primary_dark']};
+        background: {COLOR_PALETTE['primary_light']};
         padding: 1rem;
         border-radius: 8px;
         border-right: 4px solid {COLOR_PALETTE['primary_accent']};
@@ -613,11 +613,21 @@ st.markdown(f"""
         padding: 1.2rem !important;
     }}
     
+    .stSuccess p, .stSuccess div, .stSuccess span {{
+        color: {COLOR_PALETTE['success_dark']} !important;
+        font-weight: 600;
+    }}
+    
     .stError {{
         background: linear-gradient(135deg, {COLOR_PALETTE['error_light']} 0%, {COLOR_PALETTE['background']} 100%) !important;
         border-left: 5px solid {COLOR_PALETTE['error']} !important;
         border-radius: 10px !important;
         padding: 1.2rem !important;
+    }}
+    
+    .stError p, .stError div, .stError span {{
+        color: {COLOR_PALETTE['error_dark']} !important;
+        font-weight: 600;
     }}
     
     .stWarning {{
@@ -627,11 +637,21 @@ st.markdown(f"""
         padding: 1.2rem !important;
     }}
     
+    .stWarning p, .stWarning div, .stWarning span {{
+        color: {COLOR_PALETTE['warning_dark']} !important;
+        font-weight: 600;
+    }}
+    
     .stInfo {{
         background: linear-gradient(135deg, {COLOR_PALETTE['primary_light']} 0%, {COLOR_PALETTE['background']} 100%) !important;
         border-left: 5px solid {COLOR_PALETTE['primary_accent']} !important;
         border-radius: 10px !important;
         padding: 1.2rem !important;
+    }}
+    
+    .stInfo p, .stInfo div, .stInfo span {{
+        color: {COLOR_PALETTE['primary_dark']} !important;
+        font-weight: 600;
     }}
 </style>
 """, unsafe_allow_html=True)
