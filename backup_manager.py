@@ -14,6 +14,8 @@ import time
 import threading
 from datetime import datetime, timedelta
 import logging
+import sys
+import io
 
 class BackupManager:
     def __init__(self, db_path="data/app.db", storage_path="storage", backup_dir="backups"):
@@ -25,16 +27,26 @@ class BackupManager:
         # إنشاء مجلد النسخ الاحتياطي إذا لم يكن موجوداً
         os.makedirs(self.backup_dir, exist_ok=True)
         
-        # إعداد نظام التسجيل
-        logging.basicConfig(
-            level=logging.INFO,
-            format='%(asctime)s - %(levelname)s - %(message)s',
-            handlers=[
-                logging.FileHandler(os.path.join(self.backup_dir, 'backup.log')),
-                logging.StreamHandler()
-            ]
-        )
+        # إعداد نظام التسجيل مع دعم UTF-8
+        # إعادة تعيين stdout إلى UTF-8 على ويندوز
+        try:
+            if sys.stdout.encoding and sys.stdout.encoding.lower() != 'utf-8':
+                sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+                sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
+        except:
+            pass
+        
+        # إنشاء معالج السجلات مع UTF-8
+        file_handler = logging.FileHandler(os.path.join(self.backup_dir, 'backup.log'), encoding='utf-8')
+        file_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+        
+        stream_handler = logging.StreamHandler(sys.stdout)
+        stream_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+        
         self.logger = logging.getLogger(__name__)
+        self.logger.setLevel(logging.INFO)
+        self.logger.addHandler(file_handler)
+        self.logger.addHandler(stream_handler)
     
     def create_backup(self):
         """إنشاء نسخة احتياطية كاملة"""
