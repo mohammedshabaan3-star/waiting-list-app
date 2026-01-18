@@ -458,6 +458,7 @@ st.markdown(f"""
         box-shadow: 0 8px 30px rgba(37, 99, 235, 0.25);
         font-size: 2rem;
         line-height: 1.4;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.15);
     }}
     
     .subheader {{
