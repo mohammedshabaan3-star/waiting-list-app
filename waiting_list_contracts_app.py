@@ -462,7 +462,7 @@ st.markdown(f"""
     }}
     
     .subheader {{
-        color: {COLOR_PALETTE['primary_dark']};
+        color: {COLOR_PALETTE['text']};
         font-weight: 800;
         margin-top: 2rem;
         margin-bottom: 1.2rem;
@@ -479,7 +479,7 @@ st.markdown(f"""
         border-right: 5px solid {COLOR_PALETTE['primary_accent']};
         margin: 1.5rem 0;
         box-shadow: 0 4px 15px rgba(14, 165, 233, 0.15);
-        color: {COLOR_PALETTE['primary_dark']};
+        color: {COLOR_PALETTE['text']};
         font-weight: 600;
     }}
     
@@ -502,7 +502,7 @@ st.markdown(f"""
     }}
     
     .stats-header {{
-        color: {COLOR_PALETTE['primary_dark']};
+        color: {COLOR_PALETTE['text']};
         font-weight: 800;
         margin-bottom: 1.8rem;
         font-size: 1.4rem;
@@ -575,7 +575,7 @@ st.markdown(f"""
     .streamlit-expanderHeader {{
         font-weight: 800;
         font-size: 1.1rem;
-        color: {COLOR_PALETTE['primary_dark']};
+        color: {COLOR_PALETTE['text']};
         background: {COLOR_PALETTE['primary_light']};
         padding: 1rem;
         border-radius: 8px;
@@ -650,7 +650,7 @@ st.markdown(f"""
     }}
     
     .stInfo p, .stInfo div, .stInfo span {{
-        color: {COLOR_PALETTE['primary_dark']} !important;
+        color: {COLOR_PALETTE['text']} !important;
         font-weight: 600;
     }}
 </style>
